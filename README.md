@@ -1,3 +1,8 @@
+dep-t-sqlite
+============
+
+A fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite).
+
 Low-level SQLite3 bindings for Haskell
 ======================================
 
