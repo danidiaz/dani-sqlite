@@ -3,6 +3,17 @@ dep-t-sqlite
 
 A fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite).
 
+Example of `cabal.project.local` pointing to local libs:
+
+    package dep-t-sqlite
+        extra-include-dirs: C:/Users/somefolder/sqlite-amalgamation-3350300
+        extra-lib-dirs: C:/Users/somefolder/sqlite-dll-win64-x64-3350300
+
+Links
+=====
+
+- [Using the latest version of SQLite with Haskell on Windows](https://danidiaz.medium.com/using-the-latest-version-of-sqlite-with-haskell-on-windows-1d6d4df2e683)
+
 Low-level SQLite3 bindings for Haskell
 ======================================
 
