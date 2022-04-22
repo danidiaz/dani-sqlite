@@ -31,6 +31,10 @@ to work on old GHCs.
 
 - [hsctohs](https://www.reddit.com/r/haskell/comments/tthrq0/comment/i5dpir1/)
 
+- [Chapter 17. Interfacing with C: the FFI](http://book.realworldhaskell.org/read/interfacing-with-c-the-ffi.html)
+
+> the #const keyword hsc2hs provides [...] We can bind to the constants manually, by listing the CPP symbols for them using the #const keyword
+
 
 Low-level SQLite3 bindings for Haskell
 ======================================
