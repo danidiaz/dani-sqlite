@@ -35,6 +35,8 @@ to work on old GHCs.
 
 > the #const keyword hsc2hs provides [...] We can bind to the constants manually, by listing the CPP symbols for them using the #const keyword
 
+- [Writing Haskell interfaces to C code: hsc2hs](https://downloads.haskell.org/ghc/latest/docs/html/users_guide/utils.html?highlight=hsc2hs#writing-haskell-interfaces-to-c-code-hsc2hs)
+
 
 Low-level SQLite3 bindings for Haskell
 ======================================
