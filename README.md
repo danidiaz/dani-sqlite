@@ -12,7 +12,18 @@ Example of `cabal.project.local` pointing to local libs:
 Links
 =====
 
+- [FFI in the Haskell Report](https://www.haskell.org/onlinereport/haskell2010/haskellch8.html)
+
+- [Foreign function interface (FFI) in the GHC user guide](https://downloads.haskell.org/ghc/latest/docs/html/users_guide/exts/ffi.html)
+
 - [Using the latest version of SQLite with Haskell on Windows](https://danidiaz.medium.com/using-the-latest-version-of-sqlite-with-haskell-on-windows-1d6d4df2e683)
+
+- [Using_the_FFI](https://wiki.haskell.org/GHC/Using_the_FFI). 
+
+- [Haskell/FFI](https://en.wikibooks.org/wiki/Haskell/FFI)
+
+- [hsctohs](https://www.reddit.com/r/haskell/comments/tthrq0/comment/i5dpir1/)
+
 
 Low-level SQLite3 bindings for Haskell
 ======================================
