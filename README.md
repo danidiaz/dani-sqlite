@@ -18,6 +18,13 @@ Links
 
 - [Using the latest version of SQLite with Haskell on Windows](https://danidiaz.medium.com/using-the-latest-version-of-sqlite-with-haskell-on-windows-1d6d4df2e683)
 
+- [Foreign Function Interface at the Haskellwiki](https://wiki.haskell.org/Foreign_Function_Interface)
+
+> I see very little reason to not use CApiFFI if your project doesn't need
+to work on old GHCs.
+
+- [Writing Haskell interfaces to C code: hsc2hs](https://downloads.haskell.org/ghc/latest/docs/html/users_guide/utils.html)
+
 - [Using_the_FFI](https://wiki.haskell.org/GHC/Using_the_FFI). 
 
 - [Haskell/FFI](https://en.wikibooks.org/wiki/Haskell/FFI)
