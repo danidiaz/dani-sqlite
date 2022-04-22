@@ -2,7 +2,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Database.SQLite3 (
+module Dep.SQLite3 (
     -- * Connection management
     open,
     close,
@@ -131,7 +131,7 @@ module Database.SQLite3 (
     ArgIndex,
 ) where
 
-import Database.SQLite3.Direct
+import Dep.SQLite3.Direct
     ( Database
     , Statement
     , ColumnType(..)
@@ -178,7 +178,7 @@ import Database.SQLite3.Direct
     , backupPagecount
     )
 
-import qualified Database.SQLite3.Direct as Direct
+import qualified Dep.SQLite3.Direct as Direct
 
 import Prelude hiding (error)
 import qualified Data.Text as T
