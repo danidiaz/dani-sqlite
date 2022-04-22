@@ -53,11 +53,7 @@ module Database.SQLite3.Bindings.Types (
     FFIType(..),
 ) where
 
-#ifdef direct_sqlite_systemlib
 #include <sqlite3.h>
-#else
-#include "cbits/sqlite3.h"
-#endif
 
 import Foreign.C.Types
 import Foreign.Ptr

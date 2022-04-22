@@ -36,7 +36,6 @@ library
   ghc-options:      -Wall -fwarn-tabs
 
   extra-libraries: sqlite3
-  cpp-options:     -Ddirect_sqlite_systemlib
 
 test-suite test
   type:               exitcode-stdio-1.0
