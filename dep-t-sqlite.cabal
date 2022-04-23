@@ -41,7 +41,8 @@ test-suite test
   other-modules:      StrictEq
   hs-source-dirs:     test
   build-depends:      base
-                    , HUnit
+                    , tasty >= 1.4.2.1
+                    , tasty-hunit >= 0.10.0.3
                     , base16-bytestring
                     , bytestring
                     , directory
