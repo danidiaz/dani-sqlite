@@ -13,8 +13,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (UnicodeException (..))
 import Data.Typeable
-import SQLite3
-import SQLite3.Direct qualified as Direct
+import SQLite
+import SQLite.Direct qualified as Direct
 import StrictEq
 import System.Directory ()
 import System.Exit (exitFailure)

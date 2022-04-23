@@ -2,7 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module SQLite3.Types (
+module SQLite.Types (
     -- * Objects
     -- | <https://www.sqlite.org/c3ref/objlist.html>
     CDatabase,
