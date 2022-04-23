@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -314,7 +313,6 @@ close db =
 -- it uses 'interrupt' to try to stop the operation.
 interruptibly :: Database -> IO a -> IO a
 
-#if MIN_VERSION_base(4,3,0)
 interruptibly db io
   | rtsSupportsBoundThreads =
       mask $ \restore -> do
@@ -347,9 +345,6 @@ interruptibly db io
   where
     try' :: IO a -> IO (Either SomeException a)
     try' = try
-#else
-interruptibly _db io = io
-#endif
 
 -- | Execute zero or more SQL statements delimited by semicolons.
 exec :: Database -> Text -> IO ()
