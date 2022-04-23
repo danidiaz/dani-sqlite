@@ -11,7 +11,7 @@
 --
 --  * It only uses cheap conversions.  None of these bindings convert from
 --    'String' or 'T.Text'.
-module Dep.SQLite3.Direct
+module SQLite3.Direct
   ( -- * Connection management
     open,
     close,
@@ -155,7 +155,7 @@ import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (lenientDecode)
-import Dep.SQLite3.Bindings
+import SQLite3.Bindings
 import Foreign
 import Foreign.C
 import System.IO.Unsafe qualified as IOU

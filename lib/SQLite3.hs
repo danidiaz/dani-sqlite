@@ -4,7 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Dep.SQLite3
+module SQLite3
   ( -- * Connection management
     open,
     close,
@@ -156,7 +156,7 @@ import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
 import Data.Typeable
-import Dep.SQLite3.Direct
+import SQLite3.Direct
   ( ArgCount (..),
     ArgIndex,
     Backup,
@@ -198,7 +198,7 @@ import Dep.SQLite3.Direct
     interrupt,
     lastInsertRowId,
   )
-import Dep.SQLite3.Direct qualified as Direct
+import SQLite3.Direct qualified as Direct
 import Foreign.Ptr (Ptr)
 import Prelude hiding (error)
 
