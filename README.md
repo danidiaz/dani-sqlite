@@ -37,6 +37,9 @@ to work on old GHCs.
 
 - [Writing Haskell interfaces to C code: hsc2hs](https://downloads.haskell.org/ghc/latest/docs/html/users_guide/utils.html?highlight=hsc2hs#writing-haskell-interfaces-to-c-code-hsc2hs)
 
+- [Converting between `CInt` and `Int`](https://www.reddit.com/r/haskell/comments/tthrq0/monthly_hask_anything_april_2022/i60rc8l/)
+
+> Does that mean that I should always use functions like fromIntegral to convert between CInt and Int/Integer?
 
 Low-level SQLite3 bindings for Haskell
 ======================================
