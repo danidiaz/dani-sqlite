@@ -46,6 +46,10 @@ to work on old GHCs.
 
 - [Videos about the Haskell FFI](https://twitter.com/DiazCarrete/status/1518325306448388096).
 
+- [`foreign import capi "wrapper"`](https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196)
+
+  > While the Report isn't entirely clear on this, but my understanding is that the calling convention (e.g. ccall) in a foreign import ... "wrapper" indicates the calling convention that the resulting FunPtr should expect to be invoked with. If this is true then it's not obvious what foreign import capi "wrapper" should mean; afterall capi isn't really a calling convention. Rather, it just says "delegate code generation for the call to the C compiler". However, we can't delegate like this in for a "wrapper" import, since this would be akin to writing foreign export capi, which don't support.
+
 Low-level SQLite3 bindings for Haskell
 ======================================
 
