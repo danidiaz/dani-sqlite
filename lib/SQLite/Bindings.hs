@@ -207,10 +207,14 @@ type CTraceCallback a
 --
 --  * Remember to call 'freeHaskellFunPtr' when you are done with the wrapper,
 --    to avoid leaking memory.
-foreign import capi "wrapper"
+--
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCExecCallback :: CExecCallback a -> IO (FunPtr (CExecCallback a))
 
-foreign import capi "wrapper"
+-- | 
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCTraceCallback :: CTraceCallback a -> IO (FunPtr (CTraceCallback a))
 
 -- | <https://www.sqlite.org/c3ref/prepare.html>
@@ -389,13 +393,19 @@ type CFuncFinal     = Ptr CContext -> IO ()
 
 type CFuncDestroy a = Ptr a -> IO ()
 
-foreign import capi "wrapper"
+-- |
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCFunc        :: CFunc          -> IO (FunPtr CFunc)
 
-foreign import capi "wrapper"
+-- |
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCFuncFinal   :: CFuncFinal     -> IO (FunPtr CFuncFinal)
 
-foreign import capi "wrapper"
+-- |
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCFuncDestroy :: CFuncDestroy a -> IO (FunPtr (CFuncDestroy a))
 
 -- | <https://www.sqlite.org/c3ref/user_data.html>
@@ -479,7 +489,9 @@ foreign import capi "sqlite3_create_collation_v2"
 
 type CCompare a = Ptr a -> CNumBytes -> CString -> CNumBytes -> CString -> IO CInt
 
-foreign import capi "wrapper"
+-- |
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCCompare :: CCompare a -> IO (FunPtr (CCompare a))
 
 -- | <https://sqlite.org/c3ref/free.html>
@@ -500,7 +512,9 @@ foreign import capi unsafe "sqlite3_wal_hook"
 
 type CWalHook = Ptr () -> Ptr CDatabase -> CString -> CInt -> IO CError
 
-foreign import capi "wrapper"
+-- |
+-- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
+foreign import ccall "wrapper"
     mkCWalHook :: CWalHook -> IO (FunPtr CWalHook)
 
 -- | <https://www.sqlite.org/c3ref/blob_open.html>
