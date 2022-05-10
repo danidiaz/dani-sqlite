@@ -1,4 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE CApiFFI #-}
 module StrictEq (
     StrictEq(..),
     (/==),
@@ -14,7 +15,7 @@ import Foreign.Ptr
 import Foreign.Storable
 import System.IO.Unsafe         (unsafePerformIO)
 
-foreign import ccall unsafe "string.h memcmp"
+foreign import capi unsafe "string.h memcmp"
     c_memcmp :: Ptr a -> Ptr a -> CSize -> IO CInt
 
 -- | Variant of Eq that compares Double based on raw representation,
