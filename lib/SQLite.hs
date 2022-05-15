@@ -7,6 +7,7 @@ module SQLite
   ( -- * Connection management
     open,
     openV2,
+    VFS(..),
     OpenV2Flag (..),
     OpenV2Mode (..),
     close,
@@ -311,15 +312,23 @@ open path =
 -- | <https://www.sqlite.org/c3ref/open.html>
 openV2 :: 
   -- | Name of VFS module to use.
-  Text -> 
+  VFS -> 
   [OpenV2Flag] -> 
   OpenV2Mode -> 
   -- | Database filename.
   Text -> 
   IO Database
-openV2 vfsName flags mode path =
-  Direct.openV2 (toUtf8 vfsName) flags mode (toUtf8 path)
+openV2 vfs flags mode path = do
+  let mvfs = case vfs of
+        DefaultVFS -> Nothing 
+        VFSWithName vfsName -> Just vfsName
+  Direct.openV2 (toUtf8 <$> mvfs) flags mode (toUtf8 path)
     >>= checkErrorMsg ("openV2 " `appendShow` path)
+
+data VFS =
+        DefaultVFS
+      | VFSWithName Text
+      deriving (Show, Eq)
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Database -> IO ()

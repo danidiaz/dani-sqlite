@@ -78,7 +78,7 @@ encodeOpenV2Mode :: OpenV2Mode -> COpenV2Flags
 encodeOpenV2Mode mode = COpenV2Flags $ case mode of
     OpenV2ReadOnly -> #{const SQLITE_OPEN_READONLY}
     OpenV2ReadWrite -> #{const SQLITE_OPEN_READWRITE}
-    OpenV2ReadWriteCreate -> #{const SQLITE_OPEN_READONLY} .|. #{const SQLITE_OPEN_READWRITE}
+    OpenV2ReadWriteCreate -> #{const SQLITE_OPEN_READWRITE} .|. #{const SQLITE_OPEN_CREATE}
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 data OpenV2Flag = 

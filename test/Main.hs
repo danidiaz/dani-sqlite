@@ -17,7 +17,7 @@ import Data.Typeable
 import SQLite
 import SQLite.Direct qualified as Direct
 import StrictEq
-import System.Directory (removeFile)
+import System.Directory (removeFile, doesFileExist)
 import System.Exit (exitFailure)
 import System.IO
 import System.IO.Error (isUserError)
@@ -928,6 +928,20 @@ testMultiRowInsert envIO = do
           Done <- step stmt
           return ()
 
+testOpenV2CanNotCreate :: IO FilePath -> Assertion
+testOpenV2CanNotCreate filepathIO = do
+  filepath <- filepathIO
+  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+    db <- openV2 DefaultVFS [] OpenV2ReadOnly (T.pack filepath)
+    close db
+  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+    db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
+    close db
+  do
+    db <- openV2 DefaultVFS [] OpenV2ReadWriteCreate (T.pack filepath)
+    close db
+  pure ()
+
 withDatabaseFile ::
                 FilePath -- ^ Parent directory to create the file in
              -> String   -- ^ File name template
@@ -935,15 +949,19 @@ withDatabaseFile ::
              -> (IO FilePath -> TestTree) 
              -> TestTree
 withDatabaseFile dirpath template prepare =
-  withResource allocFile removeFile
+  withResource allocFile deallocFile
   where 
     allocFile = do
       (filepath, handle) <- openTempFile dirpath template
       hClose handle 
+      -- We only need the name. Tests will create the file, if needed.
+      removeFile filepath
       prepare filepath
-      do db <- open (T.pack filepath) 
-         close db
       pure filepath
+    deallocFile filepath = do
+      exists <- doesFileExist filepath
+      when exists $ removeFile filepath
+
 
 withTestEnv :: IO FilePath -> (IO TestEnv -> TestTree) -> TestTree
 withTestEnv tempDbFilePathIO = 
@@ -982,7 +1000,9 @@ main = do
           \tempDbNameIO -> 
             withTestEnv tempDbNameIO \envIO -> do
               testGroup "OldTests" $ ($ envIO) <$> regressionTests
-        , withDatabaseFile "." "direct-sqlite-test-database" 
+        , withDatabaseFile "." "direct-sqlite-test-database-open-v2" 
             (\_ -> pure ())
-            testGroup "openV2" []
+            \tempDbNameIO -> testGroup "openV2" [
+              testCase "openV2 can't create if create mode not set" $ testOpenV2CanNotCreate tempDbNameIO
+                ]
         ]
