@@ -22,7 +22,7 @@ module SQLite
 
     -- * Statement management
     prepare,
-    prepareUtf8,
+    -- prepareUtf8,
     step,
     stepNoCB,
     reset,
