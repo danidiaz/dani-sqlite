@@ -36,7 +36,7 @@ data TestEnv = TestEnv
     withConnShared :: forall a. (Database -> IO a) -> IO a
   }
 
-regressionTests :: [TestEnv -> TestTree]
+regressionTests :: [IO TestEnv -> TestTree]
 regressionTests =
   [ testCase "Exec" . testExec,
     testCase "ExecCallback" . testExecCallback,
@@ -88,8 +88,9 @@ shouldFail action = do
 withStmt :: Database -> Text -> (Statement -> IO a) -> IO a
 withStmt conn sql = bracket (prepare conn sql) finalize
 
-testExec :: TestEnv -> Assertion
-testExec TestEnv {..} = do
+testExec :: IO TestEnv -> Assertion
+testExec envIO = do
+  TestEnv {..} <- envIO
   exec conn ""
   exec conn "     "
   exec conn ";"
@@ -129,8 +130,9 @@ data Ex = Ex
 
 instance Exception Ex
 
-testExecCallback :: TestEnv -> Assertion
-testExecCallback TestEnv {..} = do
+testExecCallback :: IO TestEnv -> Assertion
+testExecCallback envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     chan <- newChan
     let exec' sql = execWithCallback conn sql $ \c n v -> writeChan chan (c, n, v)
@@ -166,8 +168,9 @@ testExecCallback TestEnv {..} = do
 
     return ()
 
-testTracing :: TestEnv -> Assertion
-testTracing TestEnv {..} = do
+testTracing :: IO TestEnv -> Assertion
+testTracing envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     chan <- newChan
     let logger m = writeChan chan m
@@ -202,8 +205,9 @@ testTracing TestEnv {..} = do
       assertEqual "tracing" "empty" msg
 
 -- Simplest SELECT
-testSimplest :: TestEnv -> Assertion
-testSimplest TestEnv {..} = do
+testSimplest :: IO TestEnv -> Assertion
+testSimplest envIO = do
+  TestEnv {..} <- envIO
   stmt <- prepare conn "SELECT 1+1"
   Row <- step stmt
   res <- column stmt 0
@@ -211,8 +215,9 @@ testSimplest TestEnv {..} = do
   finalize stmt
   assertEqual "1+1" (SQLInteger 2) res
 
-testPrepare :: TestEnv -> Assertion
-testPrepare TestEnv {..} = do
+testPrepare :: IO TestEnv -> Assertion
+testPrepare envIO = do
+  TestEnv {..} <- envIO
   True <- shouldFail $ prepare conn ""
   True <- shouldFail $ prepare conn ";"
   withConn $ \conn -> do
@@ -242,7 +247,7 @@ testPrepare TestEnv {..} = do
     exec conn "COMMIT"
   return ()
 
-testCloseBusy :: TestEnv -> Assertion
+testCloseBusy :: IO TestEnv -> Assertion
 testCloseBusy _ = do
   conn <- open ":memory:"
   stmt <- prepare conn "SELECT 1"
@@ -250,8 +255,9 @@ testCloseBusy _ = do
   finalize stmt
   close conn
 
-testBind :: TestEnv -> Assertion
-testBind TestEnv {..} = do
+testBind :: IO TestEnv -> Assertion
+testBind envIO = do
+  TestEnv {..} <- envIO
   bracket (prepare conn "SELECT ?") finalize testBind1
   bracket (prepare conn "SELECT ?+?") finalize testBind2
   bracket (prepare conn "SELECT ?,?") finalize testBind3
@@ -283,8 +289,13 @@ testBind TestEnv {..} = do
       assertEqual "blob vs. zeroblob" [SQLBlob bs, SQLBlob bs] res
 
 -- Test bindParameterCount
-testBindParamCounts :: TestEnv -> Assertion
-testBindParamCounts TestEnv {..} = do
+testBindParamCounts :: IO TestEnv -> Assertion
+testBindParamCounts envIO = do
+  TestEnv {..} <- envIO
+  let
+    testCase label query expected =
+      bracket (prepare conn query) finalize bindParameterCount
+        >>= assertEqual label expected
   testCase "single $a" "SELECT $a" 1
   testCase "3 unique ?NNNs" "SELECT (?1+?1+?1+?2+?3)" 3
   testCase "3 positional" "SELECT (?+?+?)" 3
@@ -294,14 +305,11 @@ testBindParamCounts TestEnv {..} = do
   -- 8 because ? grabs an index one greater than the highest index of all
   -- previous parameters, not just the most recent index.
   testCase "0 placeholders" "SELECT 1" 0
-  where
-    testCase label query expected =
-      bracket (prepare conn query) finalize bindParameterCount
-        >>= assertEqual label expected
 
 -- Test bindParameterName
-testBindParamName :: TestEnv -> Assertion
-testBindParamName TestEnv {..} = do
+testBindParamName :: IO TestEnv -> Assertion
+testBindParamName envIO = do
+  TestEnv {..} <- envIO
   bracket (prepare conn "SELECT :v + :v2") finalize (testNames [Just ":v", Just ":v2"])
   bracket (prepare conn "SELECT ?1 + ?1") finalize (testNames [Just "?1"])
   bracket (prepare conn "SELECT ?1 + ?2") finalize (testNames [Just "?1", Just "?2"])
@@ -318,8 +326,9 @@ testBindParamName TestEnv {..} = do
         )
         $ zip [1 ..] names
 
-testBindErrorValidation :: TestEnv -> Assertion
-testBindErrorValidation TestEnv {..} = do
+testBindErrorValidation :: IO TestEnv -> Assertion
+testBindErrorValidation envIO = do
+  TestEnv {..} <- envIO
   bracket (prepare conn "SELECT ?") finalize (assertFail . testException1)
   bracket (prepare conn "SELECT ?") finalize (assertFail . testException2)
   where
@@ -328,8 +337,9 @@ testBindErrorValidation TestEnv {..} = do
     -- Invalid use, one param in q string, 2 given
     testException2 stmt = bind stmt [SQLInteger 1, SQLInteger 2]
 
-testNamedBindParams :: TestEnv -> Assertion
-testNamedBindParams TestEnv {..} = do
+testNamedBindParams :: IO TestEnv -> Assertion
+testNamedBindParams envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     withStmt conn "SELECT :foo / :bar" $ \stmt -> do
       -- Test that we get something back for known names
@@ -361,8 +371,9 @@ testNamedBindParams TestEnv {..} = do
       Done <- step stmt
       return ()
 
-testColumns :: TestEnv -> Assertion
-testColumns TestEnv {..} = do
+testColumns :: IO TestEnv -> Assertion
+testColumns envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     withStmt conn "CREATE TABLE foo (a INT)" command
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
@@ -417,8 +428,9 @@ testColumns TestEnv {..} = do
       0 <- columnCount stmt
       return ()
 
-testTypedColumns :: TestEnv -> Assertion
-testTypedColumns TestEnv {..} = do
+testTypedColumns :: IO TestEnv -> Assertion
+testTypedColumns envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     withStmt conn "CREATE TABLE foo (a INT, b INT)" command
     withStmt conn "INSERT INTO foo VALUES (1, 2)" command
@@ -450,8 +462,9 @@ testTypedColumns TestEnv {..} = do
       0 <- columnCount stmt
       return ()
 
-testColumnName :: TestEnv -> Assertion
-testColumnName TestEnv {..} = do
+testColumnName :: IO TestEnv -> Assertion
+testColumnName envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE foo (id INTEGER PRIMARY KEY, abc TEXT, \"123\" REAL, über INT)"
     exec conn "INSERT INTO foo (abc, \"123\", über) VALUES ('hello', 3.14, 456)"
@@ -499,8 +512,9 @@ testColumnName TestEnv {..} = do
 --  * ErrorLocked
 
 --  * ErrorBusy
-testErrors :: TestEnv -> Assertion
-testErrors TestEnv {..} = do
+testErrors :: IO TestEnv -> Assertion
+testErrors envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE foo (n INT UNIQUE)"
     exec conn "INSERT INTO foo VALUES (3)"
@@ -626,8 +640,9 @@ testErrors TestEnv {..} = do
         \INSERT INTO foo VALUES (5, 6)"
 
 -- Make sure data stored in a table comes back as-is.
-testIntegrity :: TestEnv -> Assertion
-testIntegrity TestEnv {..} = do
+testIntegrity :: IO TestEnv -> Assertion
+testIntegrity envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE foo (i INT, f FLOAT, t TEXT, b BLOB, n TEXT)"
     withStmt conn "INSERT INTO foo VALUES (?, ?, ?, ?, ?)" $ \insert ->
@@ -660,8 +675,9 @@ testIntegrity TestEnv {..} = do
 
         return ()
 
-testDecodeError :: TestEnv -> Assertion
-testDecodeError TestEnv {..} = do
+testDecodeError :: IO TestEnv -> Assertion
+testDecodeError envIO = do
+  TestEnv {..} <- envIO
   withStmt conn "SELECT ?" $ \stmt -> do
     Right () <- Direct.bindText stmt 1 invalidUtf8
     Row <- step stmt
@@ -690,8 +706,9 @@ testDecodeError TestEnv {..} = do
   where
     invalidUtf8 = Direct.Utf8 $ B.pack [0x80]
 
-testResultStats :: TestEnv -> Assertion
-testResultStats TestEnv {..} = do
+testResultStats :: IO TestEnv -> Assertion
+testResultStats envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     (0, 0, 0) <- stats conn
     exec conn "CREATE TABLE tbl (n INTEGER PRIMARY KEY)"
@@ -720,8 +737,9 @@ testResultStats TestEnv {..} = do
         (changes conn)
         (Direct.totalChanges conn)
 
-testGetAutoCommit :: TestEnv -> Assertion
-testGetAutoCommit TestEnv {..} = do
+testGetAutoCommit :: IO TestEnv -> Assertion
+testGetAutoCommit envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     True <- Direct.getAutoCommit conn
     exec conn "BEGIN"
@@ -754,15 +772,17 @@ testGetAutoCommit TestEnv {..} = do
 
     return ()
 
-testStatementSql :: TestEnv -> Assertion
-testStatementSql TestEnv {..} = do
+testStatementSql :: IO TestEnv -> Assertion
+testStatementSql envIO = do
+  TestEnv {..} <- envIO
   let q1 = "SELECT 1+1"
   withStmt conn q1 $ \stmt -> do
     Just (Direct.Utf8 sql1) <- Direct.statementSql stmt
     T.encodeUtf8 q1 @=? sql1
 
-testCustomFunction :: TestEnv -> Assertion
-testCustomFunction TestEnv {..} = do
+testCustomFunction :: IO TestEnv -> Assertion
+testCustomFunction envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     createFunction conn "repeat" (Just 2) True repeatString
     withStmt conn "SELECT repeat(3,'abc')" $ \stmt -> do
@@ -780,8 +800,9 @@ testCustomFunction TestEnv {..} = do
       s <- funcArgText args 1
       funcResultText ctx $ T.concat $ replicate (fromIntegral n) s
 
-testCustomFunctionError :: TestEnv -> Assertion
-testCustomFunctionError TestEnv {..} = do
+testCustomFunctionError :: IO TestEnv -> Assertion
+testCustomFunctionError envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     createFunction conn "fail" (Just 0) True throwError
     Left SQLiteException {..} <- try $ exec conn "SELECT fail()"
@@ -794,8 +815,9 @@ testCustomFunctionError TestEnv {..} = do
   where
     throwError _ _ = error "error message"
 
-testCustomAggragate :: TestEnv -> Assertion
-testCustomAggragate TestEnv {..} = do
+testCustomAggragate :: IO TestEnv -> Assertion
+testCustomAggragate envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE tbl (n INT)"
     exec conn "INSERT INTO tbl(n) VALUES (12), (-3), (7)"
@@ -814,8 +836,9 @@ testCustomAggragate TestEnv {..} = do
       n <- funcArgInt64 args 0
       return (s + n)
 
-testCustomCollation :: TestEnv -> Assertion
-testCustomCollation TestEnv {..} = do
+testCustomCollation :: IO TestEnv -> Assertion
+testCustomCollation envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE tbl (n TEXT)"
     exec conn "INSERT INTO tbl(n) VALUES ('dog'),('mouse'),('ox'),('cat')"
@@ -839,8 +862,9 @@ testCustomCollation TestEnv {..} = do
     -- order by length first, then by lexicographical order
     cmpLen s1 s2 = compare (T.length s1) (T.length s2) <> compare s1 s2
 
-testIncrementalBlobIO :: TestEnv -> Assertion
-testIncrementalBlobIO TestEnv {..} = do
+testIncrementalBlobIO :: IO TestEnv -> Assertion
+testIncrementalBlobIO envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE tbl (n BLOB)"
     exec conn "INSERT INTO tbl(rowid,n) VALUES (1,'abcdefg')"
@@ -856,8 +880,9 @@ testIncrementalBlobIO TestEnv {..} = do
       s' <- columnBlob stmt 0
       assertEqual "blobWrite" "aBCdefg" s'
 
-testInterrupt :: TestEnv -> Assertion
-testInterrupt TestEnv {..} = do
+testInterrupt :: IO TestEnv -> Assertion
+testInterrupt envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE tbl (n INT)"
 
@@ -881,8 +906,9 @@ testInterrupt TestEnv {..} = do
   where
     tripleSum = "SELECT sum(a.n + b.n + c.n) FROM tbl as a, tbl as b, tbl as c"
 
-testMultiRowInsert :: TestEnv -> Assertion
-testMultiRowInsert TestEnv {..} = do
+testMultiRowInsert :: IO TestEnv -> Assertion
+testMultiRowInsert envIO = do
+  TestEnv {..} <- envIO
   withConn $ \conn -> do
     exec conn "CREATE TABLE foo (a INT, b INT)"
     result <- try $ exec conn "INSERT INTO foo VALUES (1,2), (3,4)"
@@ -902,16 +928,19 @@ testMultiRowInsert TestEnv {..} = do
           Done <- step stmt
           return ()
 
-withTestEnv :: String -> (TestEnv -> IO a) -> IO a
-withTestEnv tempDbName cb =
-  withConn $ \conn ->
-    cb
-      TestEnv
-        { conn = conn,
-          withConn = withConn,
-          withConnShared = withConnPath (T.pack tempDbName)
-        }
+withTestEnv :: String -> (IO TestEnv -> TestTree) -> TestTree
+withTestEnv tempDbName = 
+  withResource allocEnv deallocEnv
   where
+    allocEnv = do
+      conn <- open ":memory:"
+      pure $ TestEnv {
+            conn,
+            withConn,
+            withConnShared = withConnPath (T.pack tempDbName)
+        }
+    deallocEnv TestEnv {conn} = do
+      close conn
     withConn = withConnPath ":memory:"
     withConnPath path cb = do
       conn <- open path
@@ -927,6 +956,6 @@ main :: IO ()
 main = do
   withTempFile "." "direct-sqlite-test-database" \tempDbName _hFile -> do
     open (T.pack tempDbName) >>= close
-    withTestEnv tempDbName \env -> do
-        let g = testGroup "All" $ ($ env) <$> regressionTests
-        defaultMain g
+    defaultMain $
+        withTestEnv tempDbName \envIO -> do
+           testGroup "All" $ ($ envIO) <$> regressionTests
