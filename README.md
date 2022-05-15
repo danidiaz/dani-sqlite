@@ -3,8 +3,10 @@ dep-t-sqlite
 
 A fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite).
 
-Unlike **direct-sqlite**, it doesn't include the code for the C library, so
+- Unlike **direct-sqlite**, it doesn't include the code for the C library, so
 you'll have to install the library separately.
+
+- It requires SQLite >= 3.37.0.
 
 Example of `cabal.project.local` pointing to local libs on Windows:
 

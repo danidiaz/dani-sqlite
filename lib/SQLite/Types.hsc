@@ -94,7 +94,7 @@ encodeOpenV2Flag flag = COpenV2Flag $ case flag of
     OpenV2SharedCache -> #{const SQLITE_OPEN_SHAREDCACHE}
     OpenV2PrivateCache -> #{const SQLITE_OPEN_PRIVATECACHE}
     -- SQLITE_OPEN_EXRESCODE was added in 3.37.0   
-    -- OpenV2ExtendedResultCode -> #{const SQLITE_OPEN_EXRESCODE}
+    OpenV2ExtendedResultCode -> #{const SQLITE_OPEN_EXRESCODE}
     OpenV2NoFollow -> #{const SQLITE_OPEN_NOFOLLOW}
 
 -- Result code documentation copied from <https://www.sqlite.org/c3ref/c_abort.html>
