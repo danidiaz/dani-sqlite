@@ -6,13 +6,17 @@ A fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sql
 - Unlike **direct-sqlite**, it doesn't include the code for the C library, so
 you'll have to install the library separately.
 
-- It requires SQLite >= 3.37.0.
+  Example of `cabal.project.local` pointing to local libs on Windows:
 
-Example of `cabal.project.local` pointing to local libs on Windows:
+      package dep-t-sqlite
+          extra-include-dirs: C:/Users/somefolder/sqlite-amalgamation-3350300
+          extra-lib-dirs: C:/Users/somefolder/sqlite-dll-win64-x64-3350300
 
-    package dep-t-sqlite
-        extra-include-dirs: C:/Users/somefolder/sqlite-amalgamation-3350300
-        extra-lib-dirs: C:/Users/somefolder/sqlite-dll-win64-x64-3350300
+- Requires SQLite >= 3.37.0.
+
+- Supports [`sqlite3_open_v2`](https://www.sqlite.org/c3ref/open.html).
+
+- Supports [extended result codes](https://www.sqlite.org/rescode.html).
 
 Links
 =====
@@ -53,6 +57,9 @@ to work on old GHCs.
   > While the Report isn't entirely clear on this, but my understanding is that the calling convention (e.g. ccall) in a foreign import ... "wrapper" indicates the calling convention that the resulting FunPtr should expect to be invoked with. If this is true then it's not obvious what foreign import capi "wrapper" should mean; afterall capi isn't really a calling convention. Rather, it just says "delegate code generation for the call to the C compiler". However, we can't delegate like this in for a "wrapper" import, since this would be akin to writing foreign export capi, which don't support.
 
 - [C-language Interface Specification for SQLite](https://www.sqlite.org/capi3ref.html)
+
+Old README
+==========
 
 Low-level SQLite3 bindings for Haskell
 ======================================
