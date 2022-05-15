@@ -17,7 +17,7 @@ import Data.Typeable
 import SQLite
 import SQLite.Direct qualified as Direct
 import StrictEq
-import System.Directory ()
+import System.Directory (removeFile)
 import System.Exit (exitFailure)
 import System.IO
 import System.IO.Error (isUserError)
@@ -928,8 +928,23 @@ testMultiRowInsert envIO = do
           Done <- step stmt
           return ()
 
-withTestEnv :: String -> (IO TestEnv -> TestTree) -> TestTree
-withTestEnv tempDbName = 
+withDatabaseFile ::
+                FilePath -- ^ Parent directory to create the file in
+             -> String   -- ^ File name template
+             -> (IO FilePath -> TestTree) 
+             -> TestTree
+withDatabaseFile dirpath template =
+  withResource allocFile removeFile
+  where 
+    allocFile = do
+      (filepath, handle) <- openTempFile dirpath template
+      hClose handle 
+      do db <- open (T.pack filepath) 
+         close db
+      pure filepath
+
+withTestEnv :: IO FilePath -> (IO TestEnv -> TestTree) -> TestTree
+withTestEnv tempDbFilePathIO = 
   withResource allocEnv deallocEnv
   where
     allocEnv = do
@@ -937,7 +952,9 @@ withTestEnv tempDbName =
       pure $ TestEnv {
             conn,
             withConn,
-            withConnShared = withConnPath (T.pack tempDbName)
+            withConnShared = \callback -> do
+              tempDbFilePath <- tempDbFilePathIO    
+              withConnPath (T.pack tempDbFilePath) callback
         }
     deallocEnv TestEnv {conn} = do
       close conn
@@ -954,8 +971,9 @@ withTestEnv tempDbName =
 
 main :: IO ()
 main = do
-  withTempFile "." "direct-sqlite-test-database" \tempDbName _hFile -> do
-    open (T.pack tempDbName) >>= close
     defaultMain $
-        withTestEnv tempDbName \envIO -> do
-           testGroup "All" $ ($ envIO) <$> regressionTests
+      testGroup "All" [
+        withDatabaseFile "." "direct-sqlite-test-database" \tempDbNameIO -> 
+          withTestEnv tempDbNameIO \envIO -> do
+            testGroup "OldTests" $ ($ envIO) <$> regressionTests
+      ]
