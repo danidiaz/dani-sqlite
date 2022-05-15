@@ -57,6 +57,7 @@ module SQLite.Types (
 
 import Foreign.C.Types
 import Foreign.Ptr
+import Data.Bits ((.|.))
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 data OpenV2Mode =
@@ -68,6 +69,12 @@ data OpenV2Mode =
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 newtype COpenV2Mode = COpenV2Mode CInt
     deriving (Eq, Show)
+
+encodeOpenV2Mode :: OpenV2Mode -> COpenV2Flag
+encodeOpenV2Mode mode = COpenV2Flag $ case mode of
+    OpenV2ReadOnly -> #{const SQLITE_OPEN_READONLY}
+    OpenV2ReadWrite -> #{const SQLITE_OPEN_READWRITE}
+    OpenV2ReadWriteCreate -> #{const SQLITE_OPEN_READONLY} .|. #{const SQLITE_OPEN_READWRITE}
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 data OpenV2Flag = 
