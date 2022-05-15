@@ -982,4 +982,7 @@ main = do
           \tempDbNameIO -> 
             withTestEnv tempDbNameIO \envIO -> do
               testGroup "OldTests" $ ($ envIO) <$> regressionTests
+        , withDatabaseFile "." "direct-sqlite-test-database" 
+            (\_ -> pure ())
+            testGroup "openV2" []
         ]
