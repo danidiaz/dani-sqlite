@@ -58,6 +58,25 @@ module SQLite.Types (
 import Foreign.C.Types
 import Foreign.Ptr
 
+-- | <https://www.sqlite.org/c3ref/c_blob.html>
+data OpenV2Mode =
+      OpenV2ReadOnly
+    | OpenV2ReadWrite
+    | OpenV2ReadWriteCreate
+    deriving (Eq, Show)
+
+-- | <https://www.sqlite.org/c3ref/c_blob.html>
+data OpenV2Flag = 
+      OpenV2URI
+    | OpenV2Memory
+    | OpenV2NoMutex
+    | OpenV2FullMutex
+    | OpenV2SharedCache
+    | OpenV2PrivateCache
+    | OpenV2ExtendedResultCode
+    | OpenV2NoFollow
+    deriving (Eq, Show)
+
 -- Result code documentation copied from <https://www.sqlite.org/c3ref/c_abort.html>
 
 -- | <https://www.sqlite.org/c3ref/c_abort.html>
