@@ -14,6 +14,9 @@
 module SQLite.Direct
   ( -- * Connection management
     open,
+    openV2,
+    OpenV2Flag (..),
+    OpenV2Mode (..),
     close,
     errcode,
     errmsg,

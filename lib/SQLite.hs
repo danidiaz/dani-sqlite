@@ -6,6 +6,9 @@
 module SQLite
   ( -- * Connection management
     open,
+    openV2,
+    OpenV2Flag (..),
+    OpenV2Mode (..),
     close,
 
     -- * Simple query execution
@@ -156,7 +159,9 @@ import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
 import Data.Typeable
 import SQLite.Direct
-  ( ArgCount (..),
+  ( OpenV2Flag (..),
+    OpenV2Mode (..),
+    ArgCount (..),
     ArgIndex,
     Backup,
     BackupStepResult (..),
@@ -295,10 +300,26 @@ appendShow :: Show a => Text -> a -> Text
 appendShow txt a = txt `T.append` (T.pack . show) a
 
 -- | <https://www.sqlite.org/c3ref/open.html>
-open :: Text -> IO Database
+open :: 
+  -- | Database filename.
+  Text -> 
+  IO Database
 open path =
   Direct.open (toUtf8 path)
     >>= checkErrorMsg ("open " `appendShow` path)
+
+-- | <https://www.sqlite.org/c3ref/open.html>
+openV2 :: 
+  -- | Name of VFS module to use.
+  Text -> 
+  [OpenV2Flag] -> 
+  OpenV2Mode -> 
+  -- | Database filename.
+  Text -> 
+  IO Database
+openV2 vfsName flags mode path =
+  Direct.openV2 (toUtf8 vfsName) flags mode (toUtf8 path)
+    >>= checkErrorMsg ("openV2 " `appendShow` path)
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Database -> IO ()
