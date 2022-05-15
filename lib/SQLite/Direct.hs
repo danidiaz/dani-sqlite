@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BlockArguments #-}
 
 -- |
 -- This API is a slightly lower-level version of "Database.SQLite3".  Namely:
@@ -159,8 +160,6 @@ import Foreign
 import Foreign.C
 import System.IO.Unsafe qualified as IOU
 
-import           Data.Semigroup (Semigroup)
-
 newtype Database = Database (Ptr CDatabase)
   deriving (Eq, Show)
 
@@ -267,9 +266,9 @@ data Backup = Backup Database (Ptr CBackup)
 -- | <https://www.sqlite.org/c3ref/open.html>
 open :: Utf8 -> IO (Either (Error, Utf8) Database)
 open (Utf8 path) =
-  BS.useAsCString path $ \path' ->
-    alloca $ \database -> do
-      rc <- c_sqlite3_open path' database
+  BS.useAsCString path \cpath ->
+    alloca \database -> do
+      rc <- c_sqlite3_open cpath database
       db <- Database <$> peek database
       -- sqlite3_open returns a sqlite3 even on failure.
       -- That's where we get a more descriptive error message.
