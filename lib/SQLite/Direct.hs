@@ -282,9 +282,25 @@ open (Utf8 path) =
             then fail "sqlite3_open unexpectedly returned NULL"
             else return $ Right db
 
--- -- | <https://www.sqlite.org/c3ref/open.html>
--- openV2 :: Utf8 -> OpenV2Flags -> OpenV2Mode -> Utf8 -> IO (Either (Error, Utf8) Database)
--- openV2 (Utf8 vfsName) flags mode (Utf8 path) =
+-- | <https://www.sqlite.org/c3ref/open.html>
+openV2 :: Utf8 -> [OpenV2Flag] -> OpenV2Mode -> Utf8 -> IO (Either (Error, Utf8) Database)
+openV2 (Utf8 vfsName) flags mode (Utf8 path) =
+  BS.useAsCString vfsName \cvfsName -> do
+    BS.useAsCString path \cpath -> do
+      alloca \dbOutParam -> do
+        rc <- c_sqlite3_open_v2 cpath dbOutParam (encodeOpenV2ModeAndFlags mode flags) cvfsName 
+        db <- Database <$> peek dbOutParam
+        -- sqlite3_open returns a sqlite3 even on failure.
+        -- That's where we get a more descriptive error message.
+        case toResult () rc of
+          Left err -> do
+            msg <- errmsg db -- This returns "out of memory" if db is null.
+            _ <- close db -- This is harmless if db is null.
+            return $ Left (err, msg)
+          Right () ->
+            if db == Database nullPtr
+              then fail "sqlite3_open_v2 unexpectedly returned NULL"
+              else return $ Right db
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Database -> IO (Either Error ())

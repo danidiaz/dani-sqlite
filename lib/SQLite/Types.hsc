@@ -2,6 +2,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 module SQLite.Types (
     -- * Objects
     -- | <https://www.sqlite.org/c3ref/objlist.html>
@@ -13,6 +16,11 @@ module SQLite.Types (
     CBackup,
 
     -- * Enumerations
+    -- * Open V2 arguments
+    COpenV2Flags (..),
+    encodeOpenV2ModeAndFlags,
+    OpenV2Mode (..),
+    OpenV2Flag (..),
 
     -- ** Error
     CError(..),
@@ -57,7 +65,7 @@ module SQLite.Types (
 
 import Foreign.C.Types
 import Foreign.Ptr
-import Data.Bits ((.|.))
+import Data.Bits (Bits, (.|.))
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 data OpenV2Mode =
@@ -66,12 +74,8 @@ data OpenV2Mode =
     | OpenV2ReadWriteCreate
     deriving (Eq, Show)
 
--- | <https://www.sqlite.org/c3ref/c_blob.html>
-newtype COpenV2Mode = COpenV2Mode CInt
-    deriving (Eq, Show)
-
-encodeOpenV2Mode :: OpenV2Mode -> COpenV2Flag
-encodeOpenV2Mode mode = COpenV2Flag $ case mode of
+encodeOpenV2Mode :: OpenV2Mode -> COpenV2Flags
+encodeOpenV2Mode mode = COpenV2Flags $ case mode of
     OpenV2ReadOnly -> #{const SQLITE_OPEN_READONLY}
     OpenV2ReadWrite -> #{const SQLITE_OPEN_READWRITE}
     OpenV2ReadWriteCreate -> #{const SQLITE_OPEN_READONLY} .|. #{const SQLITE_OPEN_READWRITE}
@@ -89,11 +93,12 @@ data OpenV2Flag =
     deriving (Eq, Show)
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
-newtype COpenV2Flag = COpenV2Flag CInt
-    deriving (Eq, Show)
+newtype COpenV2Flags = COpenV2Flags CInt
+    deriving stock (Eq, Show)
+    deriving newtype Bits
 
-encodeOpenV2Flag :: OpenV2Flag -> COpenV2Flag
-encodeOpenV2Flag flag = COpenV2Flag $ case flag of
+encodeOpenV2Flag :: OpenV2Flag -> COpenV2Flags
+encodeOpenV2Flag flag = COpenV2Flags $ case flag of
     OpenV2URI -> #{const SQLITE_OPEN_URI}
     OpenV2Memory -> #{const  SQLITE_OPEN_MEMORY }
     OpenV2NoMutex -> #{const SQLITE_OPEN_NOMUTEX }
@@ -103,6 +108,10 @@ encodeOpenV2Flag flag = COpenV2Flag $ case flag of
     -- SQLITE_OPEN_EXRESCODE was added in 3.37.0   
     OpenV2ExtendedResultCode -> #{const SQLITE_OPEN_EXRESCODE}
     OpenV2NoFollow -> #{const SQLITE_OPEN_NOFOLLOW}
+
+encodeOpenV2ModeAndFlags :: OpenV2Mode -> [OpenV2Flag] -> COpenV2Flags
+encodeOpenV2ModeAndFlags (encodeOpenV2Mode -> mode) (map encodeOpenV2Flag -> flags) = 
+    mode .|. foldr (.|.) (COpenV2Flags 0) flags
 
 -- Result code documentation copied from <https://www.sqlite.org/c3ref/c_abort.html>
 

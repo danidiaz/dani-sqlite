@@ -144,7 +144,7 @@ foreign import capi "sqlite3.h sqlite3_open"
 --
 -- This sets the @'Ptr CDatabase'@ even on failure.
 foreign import capi "sqlite3.h sqlite3_open_v2"
-    c_sqlite3_open_v2 :: CString -> Ptr (Ptr CDatabase) -> CInt -> CString -> IO CError
+    c_sqlite3_open_v2 :: CString -> Ptr (Ptr CDatabase) -> COpenV2Flags -> CString -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 foreign import capi "sqlite3.h sqlite3_close"
