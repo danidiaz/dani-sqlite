@@ -942,6 +942,27 @@ testOpenV2CanNotCreate filepathIO = do
     close db
   pure ()
 
+
+testExtendedResultCodes :: IO FilePath -> Assertion
+testExtendedResultCodes filepathIO = do
+  filepath <- filepathIO
+  db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
+  Left SQLiteException {sqliteError = ErrorConstraint } <- try do
+    exec
+      db
+      "CREATE TABLE test_ercs (t TEXT PRIMARY KEY); \
+      \INSERT INTO test_ercs VALUES ('val1'); \
+      \INSERT INTO test_ercs VALUES ('val1');"
+  db <- openV2 DefaultVFS [OpenV2ExtendedResultCode] OpenV2ReadWrite (T.pack filepath)
+  Left SQLiteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
+    exec
+      db
+      "CREATE TABLE test_ercs_2 (t TEXT PRIMARY KEY); \
+      \INSERT INTO test_ercs_2 VALUES ('val1'); \
+      \INSERT INTO test_ercs_2 VALUES ('val1');"
+  close db
+
+
 withDatabaseFile ::
                 FilePath -- ^ Parent directory to create the file in
              -> String   -- ^ File name template
@@ -1003,6 +1024,7 @@ main = do
         , withDatabaseFile "." "direct-sqlite-test-database-open-v2" 
             (\_ -> pure ())
             \tempDbNameIO -> testGroup "openV2" [
-              testCase "openV2 can't create if create mode not set" $ testOpenV2CanNotCreate tempDbNameIO
+              testCase "openV2 can't create if create mode not set" $ testOpenV2CanNotCreate tempDbNameIO,
+              testCase "extended result codes are returned when flag is set" $ testExtendedResultCodes tempDbNameIO
                 ]
         ]
