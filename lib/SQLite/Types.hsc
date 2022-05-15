@@ -332,37 +332,37 @@ decodeError (CError n) = case n of
 
 encodeError :: Error -> CError
 encodeError err = CError $ case err of
-    ErrorOK                 -> #const SQLITE_OK
-    ErrorError              -> #const SQLITE_ERROR
-    ErrorInternal           -> #const SQLITE_INTERNAL
-    ErrorPermission         -> #const SQLITE_PERM
-    ErrorAbort              -> #const SQLITE_ABORT
-    ErrorBusy               -> #const SQLITE_BUSY
-    ErrorLocked             -> #const SQLITE_LOCKED
-    ErrorNoMemory           -> #const SQLITE_NOMEM
-    ErrorReadOnly           -> #const SQLITE_READONLY
-    ErrorInterrupt          -> #const SQLITE_INTERRUPT
-    ErrorIO                 -> #const SQLITE_IOERR
-    ErrorCorrupt            -> #const SQLITE_CORRUPT
-    ErrorNotFound           -> #const SQLITE_NOTFOUND
-    ErrorFull               -> #const SQLITE_FULL
-    ErrorCan'tOpen          -> #const SQLITE_CANTOPEN
-    ErrorProtocol           -> #const SQLITE_PROTOCOL
-    ErrorEmpty              -> #const SQLITE_EMPTY
-    ErrorSchema             -> #const SQLITE_SCHEMA
-    ErrorTooBig             -> #const SQLITE_TOOBIG
-    ErrorConstraint         -> #const SQLITE_CONSTRAINT
-    ErrorMismatch           -> #const SQLITE_MISMATCH
-    ErrorMisuse             -> #const SQLITE_MISUSE
-    ErrorNoLargeFileSupport -> #const SQLITE_NOLFS
-    ErrorAuthorization      -> #const SQLITE_AUTH
-    ErrorFormat             -> #const SQLITE_FORMAT
-    ErrorRange              -> #const SQLITE_RANGE
-    ErrorNotADatabase       -> #const SQLITE_NOTADB
-    ErrorNotice             -> #const SQLITE_NOTICE
-    ErrorWarning            -> #const SQLITE_WARNING
-    ErrorRow                -> #const SQLITE_ROW
-    ErrorDone               -> #const SQLITE_DONE
+    ErrorOK                 -> #{const SQLITE_OK}
+    ErrorError              -> #{const SQLITE_ERROR}
+    ErrorInternal           -> #{const SQLITE_INTERNAL}
+    ErrorPermission         -> #{const SQLITE_PERM}
+    ErrorAbort              -> #{const SQLITE_ABORT}
+    ErrorBusy               -> #{const SQLITE_BUSY}
+    ErrorLocked             -> #{const SQLITE_LOCKED}
+    ErrorNoMemory           -> #{const SQLITE_NOMEM}
+    ErrorReadOnly           -> #{const SQLITE_READONLY}
+    ErrorInterrupt          -> #{const SQLITE_INTERRUPT}
+    ErrorIO                 -> #{const SQLITE_IOERR}
+    ErrorCorrupt            -> #{const SQLITE_CORRUPT}
+    ErrorNotFound           -> #{const SQLITE_NOTFOUND}
+    ErrorFull               -> #{const SQLITE_FULL}
+    ErrorCan'tOpen          -> #{const SQLITE_CANTOPEN}
+    ErrorProtocol           -> #{const SQLITE_PROTOCOL}
+    ErrorEmpty              -> #{const SQLITE_EMPTY}
+    ErrorSchema             -> #{const SQLITE_SCHEMA}
+    ErrorTooBig             -> #{const SQLITE_TOOBIG}
+    ErrorConstraint         -> #{const SQLITE_CONSTRAINT}
+    ErrorMismatch           -> #{const SQLITE_MISMATCH}
+    ErrorMisuse             -> #{const SQLITE_MISUSE}
+    ErrorNoLargeFileSupport -> #{const SQLITE_NOLFS}
+    ErrorAuthorization      -> #{const SQLITE_AUTH}
+    ErrorFormat             -> #{const SQLITE_FORMAT}
+    ErrorRange              -> #{const SQLITE_RANGE}
+    ErrorNotADatabase       -> #{const SQLITE_NOTADB}
+    ErrorNotice             -> #{const SQLITE_NOTICE}
+    ErrorWarning            -> #{const SQLITE_WARNING}
+    ErrorRow                -> #{const SQLITE_ROW}
+    ErrorDone               -> #{const SQLITE_DONE}
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 newtype CColumnType = CColumnType CInt
@@ -381,11 +381,11 @@ decodeColumnType (CColumnType n) = case n of
 
 encodeColumnType :: ColumnType -> CColumnType
 encodeColumnType t = CColumnType $ case t of
-    IntegerColumn -> #const SQLITE_INTEGER
-    FloatColumn   -> #const SQLITE_FLOAT
-    TextColumn    -> #const SQLITE_TEXT
-    BlobColumn    -> #const SQLITE_BLOB
-    NullColumn    -> #const SQLITE_NULL
+    IntegerColumn -> #{const SQLITE_INTEGER}
+    FloatColumn   -> #{const SQLITE_FLOAT}
+    TextColumn    -> #{const SQLITE_TEXT}
+    BlobColumn    -> #{const SQLITE_BLOB}
+    NullColumn    -> #{const SQLITE_NULL}
 
 ------------------------------------------------------------------------
 -- Conversion to and from FFI types

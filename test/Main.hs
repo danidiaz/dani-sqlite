@@ -95,7 +95,7 @@ testExec TestEnv {..} = do
   exec conn ";"
   exec conn " ; ; ; ; ; "
   exec conn "--"
-  Left SQLError {sqlError = ErrorError} <- try $ exec conn "/*"
+  Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "/*"
   -- sqlite3_exec does not allow "/*" to be terminated by end of input,
   -- but <https://www.sqlite.org/lang_comment.html> says it's fine.
   exec conn ";--\n;/**/"
@@ -237,7 +237,7 @@ testPrepare TestEnv {..} = do
         Done <- step stmt -- No row was inserted, because only the CREATE TABLE
         -- statement was run.  The rest was ignored.
         return ()
-    Left SQLError {sqlError = ErrorError} <- try $ exec conn "BEGIN"
+    Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "BEGIN"
     -- We're in a transaction already, so this fails.
     exec conn "COMMIT"
   return ()
@@ -246,7 +246,7 @@ testCloseBusy :: TestEnv -> Assertion
 testCloseBusy _ = do
   conn <- open ":memory:"
   stmt <- prepare conn "SELECT 1"
-  Left SQLError {sqlError = ErrorBusy} <- try $ close conn
+  Left SQLiteException {sqliteError = ErrorBusy} <- try $ close conn
   finalize stmt
   close conn
 
@@ -605,7 +605,7 @@ testErrors TestEnv {..} = do
       Right () <- Direct.reset stmt
 
       -- But trying to 'step' again should fail.
-      Left SQLError {sqlError = err} <- try $ step stmt
+      Left SQLiteException {sqliteError = err} <- try $ step stmt
       assertBool
         "Step after table vanishes should fail with SQLITE_ERROR or SQLITE_SCHEMA"
         ( err == ErrorError
@@ -614,7 +614,7 @@ testErrors TestEnv {..} = do
         )
   where
     expectError err io = do
-      Left SQLError {sqlError = err'} <- try io
+      Left SQLiteException {sqliteError = err'} <- try io
       assertEqual "testErrors: expectError" err err'
 
     foo123456 conn =
@@ -707,7 +707,7 @@ testResultStats TestEnv {..} = do
     True <- return $ (`notElem` [1, 123, maxBound]) rowid
     exec conn "UPDATE tbl SET rowid=rowid+1 WHERE rowid=1 OR rowid=123"
     (_, 2, 6) <- stats conn
-    Left SQLError {sqlError = ErrorConstraint} <-
+    Left SQLiteException {sqliteError = ErrorConstraint} <-
       try $ exec conn "UPDATE tbl SET rowid=4"
     exec conn "DELETE FROM tbl"
     (_, 4, 10) <- stats conn
@@ -771,7 +771,7 @@ testCustomFunction TestEnv {..} = do
       Done <- step stmt
       return ()
     deleteFunction conn "repeat" (Just 2)
-    Left SQLError {sqlError = ErrorError} <-
+    Left SQLiteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT repeat(3,'abc')"
     return ()
   where
@@ -784,13 +784,13 @@ testCustomFunctionError :: TestEnv -> Assertion
 testCustomFunctionError TestEnv {..} = do
   withConn $ \conn -> do
     createFunction conn "fail" (Just 0) True throwError
-    Left SQLError {..} <- try $ exec conn "SELECT fail()"
+    Left SQLiteException {..} <- try $ exec conn "SELECT fail()"
     -- Match only the first 13 characters of the error message here.  The
     -- error message coming from the use of "error" nowadays contains
     -- fragments of the callstack and not just the string we gave it.
     assertBool
       "Catch exception"
-      (sqlError == ErrorError && T.take 13 sqlErrorDetails == "error message")
+      (sqliteError == ErrorError && T.take 13 sqliteErrorDetails == "error message")
   where
     throwError _ _ = error "error message"
 
@@ -806,7 +806,7 @@ testCustomAggragate TestEnv {..} = do
       Done <- step stmt
       return ()
     deleteFunction conn "mysum" (Just 1)
-    Left SQLError {sqlError = ErrorError} <-
+    Left SQLiteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT mysum(n) FROM tbl"
     return ()
   where
@@ -832,7 +832,7 @@ testCustomCollation TestEnv {..} = do
       Done <- step stmt
       return ()
     deleteCollation conn "len"
-    Left SQLError {sqlError = ErrorError} <-
+    Left SQLiteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT * FROM tbl ORDER BY n COLLATE len"
     return ()
   where
@@ -887,7 +887,7 @@ testMultiRowInsert TestEnv {..} = do
     exec conn "CREATE TABLE foo (a INT, b INT)"
     result <- try $ exec conn "INSERT INTO foo VALUES (1,2), (3,4)"
     case result of
-      Left SQLError {sqlError = ErrorError} ->
+      Left SQLiteException {sqliteError = ErrorError} ->
         assertFailure "Installed SQLite3 does not support multi-row INSERT via the VALUES clause"
       Left e ->
         assertFailure $ show e

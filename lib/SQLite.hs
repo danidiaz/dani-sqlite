@@ -118,7 +118,7 @@ module SQLite
     Database,
     Statement,
     SQLData (..),
-    SQLError (..),
+    SQLiteException (..),
     ColumnType (..),
     FuncContext,
     FuncArgs,
@@ -212,27 +212,27 @@ data SQLData
 -- | Exception thrown when SQLite3 reports an error.
 --
 -- direct-sqlite may throw other types of exceptions if you misuse the API.
-data SQLError = SQLError
+data SQLiteException = SQLiteException
   { -- | Error code returned by API call
-    sqlError :: !Error,
+    sqliteError :: !Error,
     -- | Text describing the error
-    sqlErrorDetails :: Text,
+    sqliteErrorDetails :: Text,
     -- | Indicates what action produced this error,
     --   e.g. @exec \"SELECT * FROM foo\"@
-    sqlErrorContext :: Text
+    sqliteErrorContext :: Text
   }
   deriving (Eq, Typeable)
 
--- NB: SQLError is lazy in 'sqlErrorDetails' and 'sqlErrorContext',
+-- NB: SQLiteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
 -- to defer message construction in the case where a user catches and
 -- immediately handles the error.
 
-instance Show SQLError where
+instance Show SQLiteException where
   show
-    SQLError
-      { sqlError = code,
-        sqlErrorDetails = details,
-        sqlErrorContext = context
+    SQLiteException
+      { sqliteError = code,
+        sqliteErrorDetails = details,
+        sqliteErrorContext = context
       } =
       T.unpack $
         T.concat
@@ -244,7 +244,7 @@ instance Show SQLError where
             details
           ]
 
-instance Exception SQLError
+instance Exception SQLiteException
 
 -- | Like 'decodeUtf8', but substitute a custom error message if
 -- decoding fails.
@@ -273,22 +273,22 @@ renderDetailSource src = case src of
   DetailMessage msg ->
     return msg
 
-throwSQLError :: DetailSource -> Text -> Error -> IO a
-throwSQLError detailSource context error = do
+throwSQLiteException :: DetailSource -> Text -> Error -> IO a
+throwSQLiteException detailSource context error = do
   Utf8 details <- renderDetailSource detailSource
   throwIO
-    SQLError
-      { sqlError = error,
-        sqlErrorDetails = decodeUtf8With lenientDecode details,
-        sqlErrorContext = context
+    SQLiteException
+      { sqliteError = error,
+        sqliteErrorDetails = decodeUtf8With lenientDecode details,
+        sqliteErrorContext = context
       }
 
 checkError :: DetailSource -> Text -> Either Error a -> IO a
-checkError ds fn = either (throwSQLError ds fn) return
+checkError ds fn = either (throwSQLiteException ds fn) return
 
 checkErrorMsg :: Text -> Either (Error, Utf8) a -> IO a
 checkErrorMsg fn result = case result of
-  Left (err, msg) -> throwSQLError (DetailMessage msg) fn err
+  Left (err, msg) -> throwSQLiteException (DetailMessage msg) fn err
   Right a -> return a
 
 appendShow :: Show a => Text -> a -> Text
@@ -436,7 +436,7 @@ stepNoCB statement =
 -- discard the error.  Otherwise, we would get "double jeopardy".
 -- For example:
 --
---  ok <- try $ step stmt :: IO (Either SQLError StepResult)
+--  ok <- try $ step stmt :: IO (Either SQLiteException StepResult)
 --  finalize stmt
 --
 -- If 'finalize' threw its error, it would throw the exception the user was
@@ -503,10 +503,10 @@ columnName stmt idx = do
   where
     desc = "Database.SQLite3.columnName: Invalid UTF-8"
     outOfMemory =
-      SQLError
-        { sqlError = ErrorNoMemory,
-          sqlErrorDetails = "out of memory (sqlite3_column_name returned NULL)",
-          sqlErrorContext = "column name"
+      SQLiteException
+        { sqliteError = ErrorNoMemory,
+          sqliteErrorDetails = "out of memory (sqlite3_column_name returned NULL)",
+          sqliteErrorContext = "column name"
         }
 
 bindBlob :: Statement -> ParamIndex -> ByteString -> IO ()
