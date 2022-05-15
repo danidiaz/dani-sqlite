@@ -85,6 +85,18 @@ data OpenV2Flag =
 newtype COpenV2Flag = COpenV2Flag CInt
     deriving (Eq, Show)
 
+encodeOpenV2Flag :: OpenV2Flag -> COpenV2Flag
+encodeOpenV2Flag flag = COpenV2Flag $ case flag of
+    OpenV2URI -> #{const SQLITE_OPEN_URI}
+    OpenV2Memory -> #{const  SQLITE_OPEN_MEMORY }
+    OpenV2NoMutex -> #{const SQLITE_OPEN_NOMUTEX }
+    OpenV2FullMutex -> #{const SQLITE_OPEN_FULLMUTEX}
+    OpenV2SharedCache -> #{const SQLITE_OPEN_SHAREDCACHE}
+    OpenV2PrivateCache -> #{const SQLITE_OPEN_PRIVATECACHE}
+    -- SQLITE_OPEN_EXRESCODE was added in 3.37.0   
+    -- OpenV2ExtendedResultCode -> #{const SQLITE_OPEN_EXRESCODE}
+    OpenV2NoFollow -> #{const SQLITE_OPEN_NOFOLLOW}
+
 -- Result code documentation copied from <https://www.sqlite.org/c3ref/c_abort.html>
 
 -- | <https://www.sqlite.org/c3ref/c_abort.html>
