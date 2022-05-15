@@ -931,14 +931,16 @@ testMultiRowInsert envIO = do
 withDatabaseFile ::
                 FilePath -- ^ Parent directory to create the file in
              -> String   -- ^ File name template
+             -> (FilePath -> IO ())
              -> (IO FilePath -> TestTree) 
              -> TestTree
-withDatabaseFile dirpath template =
+withDatabaseFile dirpath template prepare =
   withResource allocFile removeFile
   where 
     allocFile = do
       (filepath, handle) <- openTempFile dirpath template
       hClose handle 
+      prepare filepath
       do db <- open (T.pack filepath) 
          close db
       pure filepath
@@ -973,7 +975,11 @@ main :: IO ()
 main = do
     defaultMain $
       testGroup "All" [
-        withDatabaseFile "." "direct-sqlite-test-database" \tempDbNameIO -> 
-          withTestEnv tempDbNameIO \envIO -> do
-            testGroup "OldTests" $ ($ envIO) <$> regressionTests
-      ]
+        withDatabaseFile "." "direct-sqlite-test-database" 
+          (\filepath ->  
+              do db <- open (T.pack filepath) 
+                 close db)
+          \tempDbNameIO -> 
+            withTestEnv tempDbNameIO \envIO -> do
+              testGroup "OldTests" $ ($ envIO) <$> regressionTests
+        ]
