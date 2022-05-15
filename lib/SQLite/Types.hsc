@@ -131,6 +131,82 @@ data Error = ErrorOK                     -- ^ Successful result
            | ErrorWarning                -- ^ Warnings from sqlite3_log()
            | ErrorRow                    -- ^ @sqlite3_step()@ has another row ready
            | ErrorDone                   -- ^ @sqlite3_step()@ has finished executing
+           -- Extended result codes.
+           -- https://www.sqlite.org/rescode.html
+           | ErrorAbortRollback
+           | ErrorAuthorizationUser
+           | ErrorBusyRecovery
+           | ErrorBusySnapshot
+           | ErrorBusyTimeout
+           | ErrorCan'tOpenConvPath
+           | ErrorCan'tOpenDirtyWAL
+           | ErrorCan'tOpenFullPath
+           | ErrorCan'tOpenIsDir
+           | ErrorCan'tOpenNoTempDir
+           | ErrorCan'tOpenSymlink
+           | ErrorConstraintCheck
+           | ErrorConstraintCommitHook
+           | ErrorConstraintDatatype
+           | ErrorConstraintForeignKey
+           | ErrorConstraintFunction
+           | ErrorConstraintNotNull
+           | ErrorConstraintPinned
+           | ErrorConstraintPrimaryKey
+           | ErrorConstraintRowid
+           | ErrorConstraintTrigger
+           | ErrorConstraintUnique
+           | ErrorConstraintVTab
+           | ErrorCorruptIndex                
+           | ErrorCorruptSequence
+           | ErrorCorruptVTab
+           | ErrorMissingColSeq
+           | ErrorRetry
+           | ErrorSnapshot
+           | ErrorIOAccess   
+           | ErrorIOAuth
+           | ErrorIOBeginAtomic
+           | ErrorIOBlocked
+           | ErrorIOCheckReservedLock
+           | ErrorIOCheckClose
+           | ErrorIOCheckCommitAtomic
+           | ErrorIOConvPath
+           | ErrorIOCorruptFS
+           | ErrorIOData
+           | ErrorIODelete
+           | ErrorIODeleteNOENT
+           | ErrorIODirClose
+           | ErrorIODirFSync
+           | ErrorIODirFStat
+           | ErrorIOFSync
+           | ErrorIOGetTempPath
+           | ErrorIOLock
+           | ErrorIOMmap
+           | ErrorIONoMem
+           | ErrorIORDLock
+           | ErrorIORead
+           | ErrorIORollbackAtomic
+           | ErrorIOSeek
+           | ErrorIOShmLock
+           | ErrorIOShmMap
+           | ErrorIOShmOpen
+           | ErrorIOShmSize
+           | ErrorIOShortRead
+           | ErrorIOTruncate
+           | ErrorIOUnlock
+           | ErrorIOVNode
+           | ErrorIOWrite
+           | ErrorLockedSharedCache
+           | ErrorLockedVTab
+           | ErrorNoticeRecoverRollback
+           | ErrorNoticeRecoverWAL
+           | ErrorOKLoadPermanently
+           | ErrorReadOnlyCan'tInit
+           | ErrorReadOnlyCan'tLock
+           | ErrorReadOnlyDBMoved
+           | ErrorReadOnlyDirectory
+           | ErrorReadRecovery
+           | ErrorReadRollback
+           | ErrorWarningAutoindex
              deriving (Eq, Show)
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
@@ -328,6 +404,82 @@ decodeError (CError n) = case n of
     #{const SQLITE_WARNING}    -> ErrorWarning
     #{const SQLITE_ROW}        -> ErrorRow
     #{const SQLITE_DONE}       -> ErrorDone
+    -- Extended result codes.
+    -- https://www.sqlite.org/rescode.html
+    #{const SQLITE_ABORT_ROLLBACK} ->     ErrorAbortRollback      
+    #{const SQLITE_AUTH_USER} ->     ErrorAuthorizationUser  
+    #{const SQLITE_BUSY_RECOVERY} ->     ErrorBusyRecovery       
+    #{const SQLITE_BUSY_SNAPSHOT} ->     ErrorBusySnapshot       
+    #{const SQLITE_BUSY_TIMEOUT} ->     ErrorBusyTimeout        
+    #{const SQLITE_CANTOPEN_CONVPATH} ->     ErrorCan'tOpenConvPath  
+    #{const SQLITE_CANTOPEN_DIRTYWAL} ->     ErrorCan'tOpenDirtyWAL  
+    #{const SQLITE_CANTOPEN_FULLPATH} ->     ErrorCan'tOpenFullPath  
+    #{const SQLITE_CANTOPEN_ISDIR} ->     ErrorCan'tOpenIsDir     
+    #{const SQLITE_CANTOPEN_NOTEMPDIR} ->     ErrorCan'tOpenNoTempDir 
+    #{const SQLITE_CANTOPEN_SYMLINK} ->     ErrorCan'tOpenSymlink   
+    #{const SQLITE_CONSTRAINT_CHECK} ->     ErrorConstraintCheck    
+    #{const SQLITE_CONSTRAINT_COMMITHOOK} ->     ErrorConstraintCommitHook 
+    #{const SQLITE_CONSTRAINT_DATATYPE} ->     ErrorConstraintDatatype 
+    #{const SQLITE_CONSTRAINT_FOREIGNKEY} ->     ErrorConstraintForeignKey 
+    #{const SQLITE_CONSTRAINT_FUNCTION} ->     ErrorConstraintFunction 
+    #{const SQLITE_CONSTRAINT_NOTNULL} ->     ErrorConstraintNotNull  
+    #{const SQLITE_CONSTRAINT_PINNED} ->     ErrorConstraintPinned   
+    #{const SQLITE_CONSTRAINT_PRIMARYKEY} ->     ErrorConstraintPrimaryKey 
+    #{const SQLITE_CONSTRAINT_ROWID} ->     ErrorConstraintRowid    
+    #{const SQLITE_CONSTRAINT_TRIGGER} ->     ErrorConstraintTrigger  
+    #{const SQLITE_CONSTRAINT_UNIQUE} ->     ErrorConstraintUnique   
+    #{const SQLITE_CONSTRAINT_VTAB} ->     ErrorConstraintVTab     
+    #{const SQLITE_CORRUPT_INDEX}        ->     ErrorCorruptIndex       
+    #{const SQLITE_CORRUPT_SEQUENCE} ->     ErrorCorruptSequence    
+    #{const SQLITE_CORRUPT_VTAB} ->     ErrorCorruptVTab        
+    #{const SQLITE_ERROR_MISSING_COLLSEQ} ->     ErrorMissingColSeq      
+    #{const SQLITE_ERROR_RETRY} ->     ErrorRetry              
+    #{const SQLITE_ERROR_SNAPSHOT} ->     ErrorSnapshot           
+    #{const SQLITE_IOERR_ACCESS} ->     ErrorIOAccess           
+    #{const SQLITE_IOERR_AUTH} ->     ErrorIOAuth             
+    #{const SQLITE_IOERR_BEGIN_ATOMIC} ->     ErrorIOBeginAtomic      
+    #{const SQLITE_IOERR_BLOCKED} ->     ErrorIOBlocked          
+    #{const SQLITE_IOERR_CHECKRESERVEDLOCK} ->     ErrorIOCheckReservedLock 
+    #{const SQLITE_IOERR_CLOSE} ->     ErrorIOCheckClose       
+    #{const SQLITE_IOERR_COMMIT_ATOMIC} ->     ErrorIOCheckCommitAtomic 
+    #{const SQLITE_IOERR_CONVPATH} ->     ErrorIOConvPath         
+    #{const SQLITE_IOERR_CORRUPTFS} ->     ErrorIOCorruptFS        
+    #{const SQLITE_IOERR_DATA} ->     ErrorIOData             
+    #{const SQLITE_IOERR_DELETE} ->     ErrorIODelete           
+    #{const SQLITE_IOERR_DELETE_NOENT} ->     ErrorIODeleteNOENT      
+    #{const SQLITE_IOERR_DIR_CLOSE} ->     ErrorIODirClose         
+    #{const SQLITE_IOERR_DIR_FSYNC} ->     ErrorIODirFSync         
+    #{const SQLITE_IOERR_FSTAT} ->     ErrorIODirFStat         
+    #{const SQLITE_IOERR_FSYNC} ->     ErrorIOFSync         
+    #{const SQLITE_IOERR_GETTEMPPATH} ->     ErrorIOGetTempPath      
+    #{const SQLITE_IOERR_LOCK} ->     ErrorIOLock             
+    #{const SQLITE_IOERR_MMAP} ->     ErrorIOMmap             
+    #{const SQLITE_IOERR_NOMEM} ->     ErrorIONoMem            
+    #{const SQLITE_IOERR_RDLOCK} ->     ErrorIORDLock           
+    #{const SQLITE_IOERR_READ} ->     ErrorIORead             
+    #{const SQLITE_IOERR_ROLLBACK_ATOMIC} ->     ErrorIORollbackAtomic   
+    #{const SQLITE_IOERR_SEEK} ->     ErrorIOSeek             
+    #{const SQLITE_IOERR_SHMLOCK} ->     ErrorIOShmLock          
+    #{const SQLITE_IOERR_SHMMAP} ->     ErrorIOShmMap           
+    #{const SQLITE_IOERR_SHMOPEN} ->     ErrorIOShmOpen          
+    #{const SQLITE_IOERR_SHMSIZE} ->     ErrorIOShmSize          
+    #{const SQLITE_IOERR_SHORT_READ} ->     ErrorIOShortRead        
+    #{const SQLITE_IOERR_TRUNCATE} ->     ErrorIOTruncate         
+    #{const SQLITE_IOERR_UNLOCK} ->     ErrorIOUnlock           
+    #{const SQLITE_IOERR_VNODE} ->     ErrorIOVNode            
+    #{const SQLITE_IOERR_WRITE} ->     ErrorIOWrite            
+    #{const SQLITE_LOCKED_SHAREDCACHE} ->     ErrorLockedSharedCache  
+    #{const SQLITE_LOCKED_VTAB} ->     ErrorLockedVTab         
+    #{const SQLITE_NOTICE_RECOVER_ROLLBACK} ->     ErrorNoticeRecoverRollback 
+    #{const SQLITE_NOTICE_RECOVER_WAL} ->     ErrorNoticeRecoverWAL   
+    #{const SQLITE_OK_LOAD_PERMANENTLY} ->     ErrorOKLoadPermanently  
+    #{const SQLITE_READONLY_CANTINIT} ->     ErrorReadOnlyCan'tInit  
+    #{const SQLITE_READONLY_CANTLOCK} ->     ErrorReadOnlyCan'tLock  
+    #{const SQLITE_READONLY_DBMOVED} ->     ErrorReadOnlyDBMoved    
+    #{const SQLITE_READONLY_DIRECTORY} ->     ErrorReadOnlyDirectory  
+    #{const SQLITE_READONLY_RECOVERY} ->     ErrorReadRecovery       
+    #{const SQLITE_READONLY_ROLLBACK} ->     ErrorReadRollback       
+    #{const SQLITE_WARNING_AUTOINDEX} ->     ErrorWarningAutoindex   
     _                          -> error $ "decodeError " ++ show n
 
 encodeError :: Error -> CError
@@ -363,6 +515,82 @@ encodeError err = CError $ case err of
     ErrorWarning            -> #{const SQLITE_WARNING}
     ErrorRow                -> #{const SQLITE_ROW}
     ErrorDone               -> #{const SQLITE_DONE}
+    -- Extended result codes.
+    -- https://www.sqlite.org/rescode.html
+    ErrorAbortRollback      -> #{const SQLITE_ABORT_ROLLBACK}
+    ErrorAuthorizationUser  -> #{const SQLITE_AUTH_USER}
+    ErrorBusyRecovery       -> #{const SQLITE_BUSY_RECOVERY}
+    ErrorBusySnapshot       -> #{const SQLITE_BUSY_SNAPSHOT}
+    ErrorBusyTimeout        -> #{const SQLITE_BUSY_TIMEOUT}
+    ErrorCan'tOpenConvPath  -> #{const SQLITE_CANTOPEN_CONVPATH}
+    ErrorCan'tOpenDirtyWAL  -> #{const SQLITE_CANTOPEN_DIRTYWAL}
+    ErrorCan'tOpenFullPath  -> #{const SQLITE_CANTOPEN_FULLPATH}
+    ErrorCan'tOpenIsDir     -> #{const SQLITE_CANTOPEN_ISDIR}
+    ErrorCan'tOpenNoTempDir -> #{const SQLITE_CANTOPEN_NOTEMPDIR}
+    ErrorCan'tOpenSymlink   -> #{const SQLITE_CANTOPEN_SYMLINK}
+    ErrorConstraintCheck    -> #{const SQLITE_CONSTRAINT_CHECK}
+    ErrorConstraintCommitHook -> #{const SQLITE_CONSTRAINT_COMMITHOOK}
+    ErrorConstraintDatatype -> #{const SQLITE_CONSTRAINT_DATATYPE}
+    ErrorConstraintForeignKey -> #{const SQLITE_CONSTRAINT_FOREIGNKEY}
+    ErrorConstraintFunction -> #{const SQLITE_CONSTRAINT_FUNCTION}
+    ErrorConstraintNotNull  -> #{const SQLITE_CONSTRAINT_NOTNULL}
+    ErrorConstraintPinned   -> #{const SQLITE_CONSTRAINT_PINNED}
+    ErrorConstraintPrimaryKey -> #{const SQLITE_CONSTRAINT_PRIMARYKEY}
+    ErrorConstraintRowid    -> #{const SQLITE_CONSTRAINT_ROWID}
+    ErrorConstraintTrigger  -> #{const SQLITE_CONSTRAINT_TRIGGER}
+    ErrorConstraintUnique   -> #{const SQLITE_CONSTRAINT_UNIQUE}
+    ErrorConstraintVTab     -> #{const SQLITE_CONSTRAINT_VTAB}
+    ErrorCorruptIndex       -> #{const SQLITE_CORRUPT_INDEX}       
+    ErrorCorruptSequence    -> #{const SQLITE_CORRUPT_SEQUENCE}
+    ErrorCorruptVTab        -> #{const SQLITE_CORRUPT_VTAB}
+    ErrorMissingColSeq      -> #{const SQLITE_ERROR_MISSING_COLLSEQ}
+    ErrorRetry              -> #{const SQLITE_ERROR_RETRY}
+    ErrorSnapshot           -> #{const SQLITE_ERROR_SNAPSHOT}
+    ErrorIOAccess           -> #{const SQLITE_IOERR_ACCESS}
+    ErrorIOAuth             -> #{const SQLITE_IOERR_AUTH}
+    ErrorIOBeginAtomic      -> #{const SQLITE_IOERR_BEGIN_ATOMIC}
+    ErrorIOBlocked          -> #{const SQLITE_IOERR_BLOCKED}
+    ErrorIOCheckReservedLock -> #{const SQLITE_IOERR_CHECKRESERVEDLOCK}
+    ErrorIOCheckClose       -> #{const SQLITE_IOERR_CLOSE}
+    ErrorIOCheckCommitAtomic -> #{const SQLITE_IOERR_COMMIT_ATOMIC}
+    ErrorIOConvPath         -> #{const SQLITE_IOERR_CONVPATH}
+    ErrorIOCorruptFS        -> #{const SQLITE_IOERR_CORRUPTFS}
+    ErrorIOData             -> #{const SQLITE_IOERR_DATA}
+    ErrorIODelete           -> #{const SQLITE_IOERR_DELETE}
+    ErrorIODeleteNOENT      -> #{const SQLITE_IOERR_DELETE_NOENT}
+    ErrorIODirClose         -> #{const SQLITE_IOERR_DIR_CLOSE}
+    ErrorIODirFSync         -> #{const SQLITE_IOERR_DIR_FSYNC}
+    ErrorIODirFStat         -> #{const SQLITE_IOERR_FSTAT}
+    ErrorIOFSync         -> #{const SQLITE_IOERR_FSYNC}
+    ErrorIOGetTempPath      -> #{const SQLITE_IOERR_GETTEMPPATH}
+    ErrorIOLock             -> #{const SQLITE_IOERR_LOCK}
+    ErrorIOMmap             -> #{const SQLITE_IOERR_MMAP}
+    ErrorIONoMem            -> #{const SQLITE_IOERR_NOMEM}
+    ErrorIORDLock           -> #{const SQLITE_IOERR_RDLOCK}
+    ErrorIORead             -> #{const SQLITE_IOERR_READ}
+    ErrorIORollbackAtomic   -> #{const SQLITE_IOERR_ROLLBACK_ATOMIC}
+    ErrorIOSeek             -> #{const SQLITE_IOERR_SEEK}
+    ErrorIOShmLock          -> #{const SQLITE_IOERR_SHMLOCK}
+    ErrorIOShmMap           -> #{const SQLITE_IOERR_SHMMAP}
+    ErrorIOShmOpen          -> #{const SQLITE_IOERR_SHMOPEN}
+    ErrorIOShmSize          -> #{const SQLITE_IOERR_SHMSIZE}
+    ErrorIOShortRead        -> #{const SQLITE_IOERR_SHORT_READ}
+    ErrorIOTruncate         -> #{const SQLITE_IOERR_TRUNCATE}
+    ErrorIOUnlock           -> #{const SQLITE_IOERR_UNLOCK}
+    ErrorIOVNode            -> #{const SQLITE_IOERR_VNODE}
+    ErrorIOWrite            -> #{const SQLITE_IOERR_WRITE}
+    ErrorLockedSharedCache  -> #{const SQLITE_LOCKED_SHAREDCACHE}
+    ErrorLockedVTab         -> #{const SQLITE_LOCKED_VTAB}
+    ErrorNoticeRecoverRollback -> #{const SQLITE_NOTICE_RECOVER_ROLLBACK}
+    ErrorNoticeRecoverWAL   -> #{const SQLITE_NOTICE_RECOVER_WAL}
+    ErrorOKLoadPermanently  -> #{const SQLITE_OK_LOAD_PERMANENTLY}
+    ErrorReadOnlyCan'tInit  -> #{const SQLITE_READONLY_CANTINIT}
+    ErrorReadOnlyCan'tLock  -> #{const SQLITE_READONLY_CANTLOCK}
+    ErrorReadOnlyDBMoved    -> #{const SQLITE_READONLY_DBMOVED}
+    ErrorReadOnlyDirectory  -> #{const SQLITE_READONLY_DIRECTORY}
+    ErrorReadRecovery       -> #{const SQLITE_READONLY_RECOVERY}
+    ErrorReadRollback       -> #{const SQLITE_READONLY_ROLLBACK}
+    ErrorWarningAutoindex   -> #{const SQLITE_WARNING_AUTOINDEX}
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
 newtype CColumnType = CColumnType CInt
