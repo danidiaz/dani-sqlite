@@ -66,6 +66,10 @@ data OpenV2Mode =
     deriving (Eq, Show)
 
 -- | <https://www.sqlite.org/c3ref/c_blob.html>
+newtype COpenV2Mode = COpenV2Mode CInt
+    deriving (Eq, Show)
+
+-- | <https://www.sqlite.org/c3ref/c_blob.html>
 data OpenV2Flag = 
       OpenV2URI
     | OpenV2Memory
@@ -75,6 +79,10 @@ data OpenV2Flag =
     | OpenV2PrivateCache
     | OpenV2ExtendedResultCode
     | OpenV2NoFollow
+    deriving (Eq, Show)
+
+-- | <https://www.sqlite.org/c3ref/c_blob.html>
+newtype COpenV2Flag = COpenV2Flag CInt
     deriving (Eq, Show)
 
 -- Result code documentation copied from <https://www.sqlite.org/c3ref/c_abort.html>
