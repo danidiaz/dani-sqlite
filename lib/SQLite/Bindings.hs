@@ -5,6 +5,7 @@ module SQLite.Bindings (
 
     -- * Connection management
     c_sqlite3_open,
+    c_sqlite3_open_v2,
     c_sqlite3_close,
     c_sqlite3_errcode,
     c_sqlite3_errmsg,
@@ -138,6 +139,12 @@ import Foreign.C
 -- This sets the @'Ptr CDatabase'@ even on failure.
 foreign import capi "sqlite3.h sqlite3_open"
     c_sqlite3_open :: CString -> Ptr (Ptr CDatabase) -> IO CError
+
+-- | <https://www.sqlite.org/c3ref/open.html>
+--
+-- This sets the @'Ptr CDatabase'@ even on failure.
+foreign import capi "sqlite3.h sqlite3_open_v2"
+    c_sqlite3_open_v2 :: CString -> Ptr (Ptr CDatabase) -> CInt -> CString -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 foreign import capi "sqlite3.h sqlite3_close"
