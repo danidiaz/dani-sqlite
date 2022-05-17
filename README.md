@@ -58,20 +58,14 @@ to work on old GHCs.
 
 - [C-language Interface Specification for SQLite](https://www.sqlite.org/capi3ref.html)
 
-Old README
-==========
+- [parameters](https://www.sqlite.org/lang_expr.html#varparam)
 
-Low-level SQLite3 bindings for Haskell
-======================================
+  [The sqlite3_bind_parameter_name(P,N) interface returns the name of the N-th SQL parameter in the prepared statement P.](https://www.sqlite.org/c3ref/bind_parameter_name.html)
 
-[![Build Status](https://travis-ci.org/IreneKnapp/direct-sqlite.png?branch=master)](https://travis-ci.org/IreneKnapp/direct-sqlite) ![Hackage](https://img.shields.io/hackage/v/direct-sqlite.svg?style=flat-square)
+  [Return the index of an SQL parameter given its name. The index value returned is suitable for use as the second parameter to sqlite3_bind().](https://www.sqlite.org/c3ref/bind_parameter_index.html)
 
-This package is not very different from the other SQLite3 bindings out there, but it fixes a few deficiencies I was finding. As compared to bindings-sqlite3, it is slightly higher-level, in that it supports marshalling of data values to and from the database. In particular, it supports strings encoded as UTF8, and BLOBs represented as ByteStrings.
+- [Closing A Database Connection](https://www.sqlite.org/c3ref/close.html)
 
-For contribtions, please read [contributing guide](CONTRIBUTING.md) before sending PRs.
+  > Ideally, applications should finalize all prepared statements, close all BLOB handles, and finish all sqlite3_backup objects associated with the sqlite3 object prior to attempting to close the object.
 
-# Contributors
 
-- [Irene Knapp](https://github.com/nurpax) author
-- [Janne Hellsten](https://github.com/nurpax) long-term maintainer
-- [Sergey Bushnyak](https://github.com/sigrlami) current maintainer
