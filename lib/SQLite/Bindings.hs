@@ -136,36 +136,36 @@ import Foreign.C
 
 -- | <https://www.sqlite.org/c3ref/open.html>
 --
--- This sets the @'Ptr CDatabase'@ even on failure.
+-- This sets the @'Ptr CConnection'@ even on failure.
 foreign import capi "sqlite3.h sqlite3_open"
-    c_sqlite3_open :: CString -> Ptr (Ptr CDatabase) -> IO CError
+    c_sqlite3_open :: CString -> Ptr (Ptr CConnection) -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/open.html>
 --
--- This sets the @'Ptr CDatabase'@ even on failure.
+-- This sets the @'Ptr CConnection'@ even on failure.
 foreign import capi "sqlite3.h sqlite3_open_v2"
-    c_sqlite3_open_v2 :: CString -> Ptr (Ptr CDatabase) -> COpenV2Flags -> CString -> IO CError
+    c_sqlite3_open_v2 :: CString -> Ptr (Ptr CConnection) -> COpenV2Flags -> CString -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 foreign import capi "sqlite3.h sqlite3_close"
-    c_sqlite3_close :: Ptr CDatabase -> IO CError
+    c_sqlite3_close :: Ptr CConnection -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/errcode.html>
 foreign import capi unsafe "sqlite3.h sqlite3_errcode"
-    c_sqlite3_errcode :: Ptr CDatabase -> IO CError
+    c_sqlite3_errcode :: Ptr CConnection -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/errcode.html>
 foreign import capi unsafe "sqlite3.h sqlite3_errmsg"
-    c_sqlite3_errmsg :: Ptr CDatabase -> IO CString
+    c_sqlite3_errmsg :: Ptr CConnection -> IO CString
 
 -- | <https://www.sqlite.org/c3ref/interrupt.html>
 foreign import capi "sqlite3.h sqlite3_interrupt"
-    c_sqlite3_interrupt :: Ptr CDatabase -> IO ()
+    c_sqlite3_interrupt :: Ptr CConnection -> IO ()
 
 -- | <https://www.sqlite.org/c3ref/profile.html>
 foreign import capi "sqlite3.h sqlite3_trace"
     c_sqlite3_trace
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> FunPtr (CTraceCallback a) -- ^ Optional callback function called for each row.
         -> Ptr a                     -- ^ Context passed to the callback.
         -> IO (Ptr ())               -- ^ Returns context pointer from previously.
@@ -173,7 +173,7 @@ foreign import capi "sqlite3.h sqlite3_trace"
 
 -- | <https://www.sqlite.org/c3ref/get_autocommit.html>
 foreign import capi unsafe "sqlite3.h sqlite3_get_autocommit"
-    c_sqlite3_get_autocommit :: Ptr CDatabase -> IO CInt
+    c_sqlite3_get_autocommit :: Ptr CConnection -> IO CInt
 
 -- | <https://www.sqlite.org/c3ref/enable_shared_cache.html>
 foreign import capi unsafe "sqlite3.h sqlite3_enable_shared_cache"
@@ -182,7 +182,7 @@ foreign import capi unsafe "sqlite3.h sqlite3_enable_shared_cache"
 -- | <https://www.sqlite.org/c3ref/exec.html>
 foreign import capi "sqlite3.h sqlite3_exec"
     c_sqlite3_exec
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> CString                  -- ^ SQL statement, UTF-8 encoded.
         -> FunPtr (CExecCallback a) -- ^ Optional callback function called for each row.
         -> Ptr a                    -- ^ Context passed to the callback.
@@ -230,7 +230,7 @@ foreign import ccall "wrapper"
 -- the @'Ptr' 'CStatement'@ to null.
 foreign import capi "sqlite3.h sqlite3_prepare_v2"
     c_sqlite3_prepare_v2
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> CString              -- ^ SQL statement, UTF-8 encoded.
         -> CNumBytes            -- ^ Maximum length of the SQL statement,
                                 --   in bytes.  If this is negative, then the
@@ -242,7 +242,7 @@ foreign import capi "sqlite3.h sqlite3_prepare_v2"
 
 -- | <https://www.sqlite.org/c3ref/db_handle.html>
 foreign import capi unsafe "sqlite3.h sqlite3_db_handle"
-    c_sqlite3_db_handle :: Ptr CStatement -> IO (Ptr CDatabase)
+    c_sqlite3_db_handle :: Ptr CStatement -> IO (Ptr CConnection)
 
 -- | <https://www.sqlite.org/c3ref/step.html>
 foreign import capi "sqlite3.h sqlite3_step"
@@ -368,22 +368,22 @@ foreign import capi unsafe "sqlite3.h sqlite3_column_double"
 
 -- | <https://www.sqlite.org/c3ref/last_insert_rowid.html>
 foreign import capi unsafe "sqlite3.h sqlite3_last_insert_rowid"
-    c_sqlite3_last_insert_rowid :: Ptr CDatabase -> IO Int64
+    c_sqlite3_last_insert_rowid :: Ptr CConnection -> IO Int64
 
 -- | <https://www.sqlite.org/c3ref/changes.html>
 foreign import capi unsafe "sqlite3.h sqlite3_changes"
-    c_sqlite3_changes :: Ptr CDatabase -> IO CInt
+    c_sqlite3_changes :: Ptr CConnection -> IO CInt
 
 -- | <https://www.sqlite.org/c3ref/total_changes.html>
 foreign import capi unsafe "sqlite3.h sqlite3_total_changes"
-    c_sqlite3_total_changes :: Ptr CDatabase -> IO CInt
+    c_sqlite3_total_changes :: Ptr CConnection -> IO CInt
 
 -- do not use unsafe import here, it might call back to haskell
 -- via the CFuncDestroy argument
 -- | <https://sqlite.org/c3ref/create_function.html>
 foreign import capi "sqlite3.h sqlite3_create_function_v2"
     c_sqlite3_create_function_v2
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> CString         -- ^ Name of the function.
         -> CArgCount       -- ^ Number of arguments.
         -> CInt            -- ^ Preferred text encoding (also used to pass flags).
@@ -421,7 +421,7 @@ foreign import capi unsafe "sqlite3.h sqlite3_user_data"
 
 -- | <https://www.sqlite.org/c3ref/context_db_handle.html>
 foreign import capi unsafe "sqlite3.h sqlite3_context_db_handle"
-    c_sqlite3_context_db_handle :: Ptr CContext -> IO (Ptr CDatabase)
+    c_sqlite3_context_db_handle :: Ptr CContext -> IO (Ptr CConnection)
 
 -- | <https://www.sqlite.org/c3ref/aggregate_context.html>
 foreign import capi unsafe "sqlite3.h sqlite3_aggregate_context"
@@ -486,7 +486,7 @@ foreign import capi unsafe "sqlite3.h sqlite3_result_error"
 -- | <https://www.sqlite.org/c3ref/create_collation.html>
 foreign import capi "sqlite3.h sqlite3_create_collation_v2"
     c_sqlite3_create_collation_v2
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> CString         -- ^ Name of the collation.
         -> CInt            -- ^ Text encoding.
         -> Ptr a           -- ^ User data.
@@ -511,13 +511,13 @@ foreign import capi "sqlite3.h &sqlite3_free"
 
 -- | <https://sqlite.org/c3ref/enable_load_extension.html>
 foreign import capi "sqlite3.h sqlite3_enable_load_extension"
-    c_sqlite3_enable_load_extension :: Ptr CDatabase -> Bool -> IO CError
+    c_sqlite3_enable_load_extension :: Ptr CConnection -> Bool -> IO CError
 
 -- | <https://www.sqlite.org/c3ref/wal_hook.html>
 foreign import capi unsafe "sqlite3.h sqlite3_wal_hook"
-    c_sqlite3_wal_hook :: Ptr CDatabase -> FunPtr CWalHook -> Ptr a -> IO (Ptr ())
+    c_sqlite3_wal_hook :: Ptr CConnection -> FunPtr CWalHook -> Ptr a -> IO (Ptr ())
 
-type CWalHook = Ptr () -> Ptr CDatabase -> CString -> CInt -> IO CError
+type CWalHook = Ptr () -> Ptr CConnection -> CString -> CInt -> IO CError
 
 -- |
 -- <https://gitlab.haskell.org/ghc/ghc/-/issues/21532#note_428196>
@@ -527,7 +527,7 @@ foreign import ccall "wrapper"
 -- | <https://www.sqlite.org/c3ref/blob_open.html>
 foreign import capi unsafe "sqlite3.h sqlite3_blob_open"
     c_sqlite3_blob_open
-        :: Ptr CDatabase
+        :: Ptr CConnection
         -> CString         -- ^ Database name.
         -> CString         -- ^ Table name.
         -> CString         -- ^ Column name.
@@ -559,9 +559,9 @@ foreign import capi unsafe "sqlite3.h sqlite3_blob_write"
 -- | <https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupinit>
 foreign import capi "sqlite3.h sqlite3_backup_init"
     c_sqlite3_backup_init
-        :: Ptr CDatabase  -- ^ Destination database handle.
+        :: Ptr CConnection  -- ^ Destination database handle.
         -> CString        -- ^ Destination database name.
-        -> Ptr CDatabase  -- ^ Source database handle.
+        -> Ptr CConnection  -- ^ Source database handle.
         -> CString        -- ^ Source database name.
         -> IO (Ptr CBackup)
 

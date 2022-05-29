@@ -89,7 +89,7 @@ module SQLite
     funcResultBlob,
     funcResultZeroBlob,
     funcResultNull,
-    getFuncContextDatabase,
+    getFuncContextConnection,
 
     -- * Create custom collations
     createCollation,
@@ -119,7 +119,7 @@ module SQLite
     backupPagecount,
 
     -- * Types
-    Database,
+    Connection,
     Statement,
     SQLData (..),
     SQLiteException (..),
@@ -170,7 +170,7 @@ import SQLite.Direct
     ColumnCount,
     ColumnIndex (..),
     ColumnType (..),
-    Database,
+    Connection,
     Error (..),
     FuncArgs,
     FuncContext,
@@ -199,7 +199,7 @@ import SQLite.Direct
     funcResultInt64,
     funcResultNull,
     funcResultZeroBlob,
-    getFuncContextDatabase,
+    getFuncContextConnection,
     interrupt,
     lastInsertRowId,
   )
@@ -265,16 +265,16 @@ toUtf8 :: Text -> Utf8
 toUtf8 = Utf8 . encodeUtf8
 
 data DetailSource
-  = DetailDatabase Database
+  = DetailConnection Connection
   | DetailStatement Statement
   | DetailMessage Utf8
 
 renderDetailSource :: DetailSource -> IO Utf8
 renderDetailSource src = case src of
-  DetailDatabase db ->
+  DetailConnection db ->
     Direct.errmsg db
   DetailStatement stmt -> do
-    db <- Direct.getStatementDatabase stmt
+    db <- Direct.getStatementConnection stmt
     Direct.errmsg db
   DetailMessage msg ->
     return msg
@@ -302,9 +302,9 @@ appendShow txt a = txt `T.append` (T.pack . show) a
 
 -- | <https://www.sqlite.org/c3ref/open.html>
 open :: 
-  -- | Database filename.
+  -- | Connection filename.
   Text -> 
-  IO Database
+  IO Connection
 open path =
   Direct.open (toUtf8 path)
     >>= checkErrorMsg ("open " `appendShow` path)
@@ -317,7 +317,7 @@ openV2 ::
   OpenV2Mode -> 
   -- | Database filename.
   Text -> 
-  IO Database
+  IO Connection
 openV2 vfs flags mode path = do
   let mvfs = case vfs of
         DefaultVFS -> Nothing 
@@ -331,9 +331,9 @@ data VFS =
       deriving (Show, Eq)
 
 -- | <https://www.sqlite.org/c3ref/close.html>
-close :: Database -> IO ()
+close :: Connection -> IO ()
 close db =
-  Direct.close db >>= checkError (DetailDatabase db) "close"
+  Direct.close db >>= checkError (DetailConnection db) "close"
 
 -- | Make it possible to interrupt the given database operation with an
 -- asynchronous exception.  This only works if the program is compiled with
@@ -341,7 +341,7 @@ close db =
 --
 -- It works by running the callback in a forked thread.  If interrupted,
 -- it uses 'interrupt' to try to stop the operation.
-interruptibly :: Database -> IO a -> IO a
+interruptibly :: Connection -> IO a -> IO a
 
 interruptibly db io
   | rtsSupportsBoundThreads =
@@ -377,7 +377,7 @@ interruptibly db io
     try' = try
 
 -- | Execute zero or more SQL statements delimited by semicolons.
-exec :: Database -> Text -> IO ()
+exec :: Connection -> Text -> IO ()
 exec db sql =
   Direct.exec db (toUtf8 sql)
     >>= checkErrorMsg ("exec " `appendShow` sql)
@@ -386,7 +386,7 @@ exec db sql =
 --
 -- This is mainly for convenience when experimenting in GHCi.
 -- The output format may change in the future.
-execPrint :: Database -> Text -> IO ()
+execPrint :: Connection -> Text -> IO ()
 execPrint !db !sql =
   interruptibly db $
     execWithCallback db sql $ \_count _colnames -> T.putStrLn . showValues
@@ -396,7 +396,7 @@ execPrint !db !sql =
     showValues = T.intercalate "|" . map (fromMaybe "")
 
 -- | Like 'exec', but invoke the callback for each result row.
-execWithCallback :: Database -> Text -> ExecCallback -> IO ()
+execWithCallback :: Connection -> Text -> ExecCallback -> IO ()
 execWithCallback db sql cb =
   Direct.execWithCallback db (toUtf8 sql) cb'
     >>= checkErrorMsg ("execWithCallback " `appendShow` sql)
@@ -427,7 +427,7 @@ type ExecCallback =
 -- subsequent statements.
 --
 -- If the query string contains no SQL statements, this 'fail's.
-prepare :: Database -> Text -> IO Statement
+prepare :: Connection -> Text -> IO Statement
 prepare db sql = prepareUtf8 db (toUtf8 sql)
 
 -- | <https://www.sqlite.org/c3ref/prepare.html>
@@ -436,11 +436,11 @@ prepare db sql = prepareUtf8 db (toUtf8 sql)
 -- have Utf8
 --
 -- If the query string contains no SQL statements, this 'fail's.
-prepareUtf8 :: Database -> Utf8 -> IO Statement
+prepareUtf8 :: Connection -> Utf8 -> IO Statement
 prepareUtf8 db sql = do
   m <-
     Direct.prepare db sql
-      >>= checkError (DetailDatabase db) ("prepare " `appendShow` sql)
+      >>= checkError (DetailConnection db) ("prepare " `appendShow` sql)
   case m of
     Nothing -> fail "Direct.SQLite3.prepare: empty query string"
     Just stmt -> return stmt
@@ -691,7 +691,7 @@ typedColumns statement = zipWithM f [0 ..]
 -- same result given the same input, you can set the boolean flag to let
 -- @sqlite@ perform additional optimizations.
 createFunction ::
-  Database ->
+  Connection ->
   -- | Name of the function.
   Text ->
   -- | Number of arguments. 'Nothing' means that the
@@ -704,11 +704,11 @@ createFunction ::
   IO ()
 createFunction db name nArgs isDet fun =
   Direct.createFunction db (toUtf8 name) nArgs isDet fun
-    >>= checkError (DetailDatabase db) ("createFunction " `appendShow` name)
+    >>= checkError (DetailConnection db) ("createFunction " `appendShow` name)
 
 -- | Like 'createFunction' except that it creates an aggregate function.
 createAggregate ::
-  Database ->
+  Connection ->
   -- | Name of the function.
   Text ->
   -- | Number of arguments.
@@ -724,13 +724,13 @@ createAggregate ::
   IO ()
 createAggregate db name nArgs initSt xStep xFinal =
   Direct.createAggregate db (toUtf8 name) nArgs initSt xStep xFinal
-    >>= checkError (DetailDatabase db) ("createAggregate " `appendShow` name)
+    >>= checkError (DetailConnection db) ("createAggregate " `appendShow` name)
 
 -- | Delete an SQL function (scalar or aggregate).
-deleteFunction :: Database -> Text -> Maybe ArgCount -> IO ()
+deleteFunction :: Connection -> Text -> Maybe ArgCount -> IO ()
 deleteFunction db name nArgs =
   Direct.deleteFunction db (toUtf8 name) nArgs
-    >>= checkError (DetailDatabase db) ("deleteFunction " `appendShow` name)
+    >>= checkError (DetailConnection db) ("deleteFunction " `appendShow` name)
 
 funcArgText :: FuncArgs -> ArgIndex -> IO Text
 funcArgText args argIndex =
@@ -752,7 +752,7 @@ funcResultText ctx value =
 
 -- | <https://www.sqlite.org/c3ref/create_collation.html>
 createCollation ::
-  Database ->
+  Connection ->
   -- | Name of the collation.
   Text ->
   -- | Comparison function.
@@ -760,23 +760,23 @@ createCollation ::
   IO ()
 createCollation db name cmp =
   Direct.createCollation db (toUtf8 name) cmp'
-    >>= checkError (DetailDatabase db) ("createCollation " `appendShow` name)
+    >>= checkError (DetailConnection db) ("createCollation " `appendShow` name)
   where
     cmp' (Utf8 s1) (Utf8 s2) = cmp (fromUtf8'' s1) (fromUtf8'' s2)
     -- avoid throwing exceptions as much as possible
     fromUtf8'' = decodeUtf8With lenientDecode
 
 -- | Delete a collation.
-deleteCollation :: Database -> Text -> IO ()
+deleteCollation :: Connection -> Text -> IO ()
 deleteCollation db name =
   Direct.deleteCollation db (toUtf8 name)
-    >>= checkError (DetailDatabase db) ("deleteCollation " `appendShow` name)
+    >>= checkError (DetailConnection db) ("deleteCollation " `appendShow` name)
 
 -- | <https://www.sqlite.org/c3ref/blob_open.html>
 --
 -- Open a blob for incremental I/O.
 blobOpen ::
-  Database ->
+  Connection ->
   -- | The symbolic name of the database (e.g. "main").
   Text ->
   -- | The table name.
@@ -790,13 +790,13 @@ blobOpen ::
   IO Blob
 blobOpen db zDb zTable zColumn rowid rw =
   Direct.blobOpen db (toUtf8 zDb) (toUtf8 zTable) (toUtf8 zColumn) rowid rw
-    >>= checkError (DetailDatabase db) "blobOpen"
+    >>= checkError (DetailConnection db) "blobOpen"
 
 -- | <https://www.sqlite.org/c3ref/blob_close.html>
 blobClose :: Blob -> IO ()
 blobClose blob@(Direct.Blob db _) =
   Direct.blobClose blob
-    >>= checkError (DetailDatabase db) "blobClose"
+    >>= checkError (DetailConnection db) "blobClose"
 
 -- | <https://www.sqlite.org/c3ref/blob_reopen.html>
 blobReopen ::
@@ -806,7 +806,7 @@ blobReopen ::
   IO ()
 blobReopen blob@(Direct.Blob db _) rowid =
   Direct.blobReopen blob rowid
-    >>= checkError (DetailDatabase db) "blobReopen"
+    >>= checkError (DetailConnection db) "blobReopen"
 
 -- | <https://www.sqlite.org/c3ref/blob_read.html>
 blobRead ::
@@ -818,12 +818,12 @@ blobRead ::
   IO ByteString
 blobRead blob@(Direct.Blob db _) len offset =
   Direct.blobRead blob len offset
-    >>= checkError (DetailDatabase db) "blobRead"
+    >>= checkError (DetailConnection db) "blobRead"
 
 blobReadBuf :: Blob -> Ptr a -> Int -> Int -> IO ()
 blobReadBuf blob@(Direct.Blob db _) buf len offset =
   Direct.blobReadBuf blob buf len offset
-    >>= checkError (DetailDatabase db) "blobReadBuf"
+    >>= checkError (DetailConnection db) "blobReadBuf"
 
 -- | <https://www.sqlite.org/c3ref/blob_write.html>
 blobWrite ::
@@ -834,26 +834,26 @@ blobWrite ::
   IO ()
 blobWrite blob@(Direct.Blob db _) bs offset =
   Direct.blobWrite blob bs offset
-    >>= checkError (DetailDatabase db) "blobWrite"
+    >>= checkError (DetailConnection db) "blobWrite"
 
 backupInit ::
   -- | Destination database handle.
-  Database ->
+  Connection ->
   -- | Destination database name.
   Text ->
   -- | Source database handle.
-  Database ->
+  Connection ->
   -- | Source database name.
   Text ->
   IO Backup
 backupInit dstDb dstName srcDb srcName =
   Direct.backupInit dstDb (toUtf8 dstName) srcDb (toUtf8 srcName)
-    >>= checkError (DetailDatabase dstDb) "backupInit"
+    >>= checkError (DetailConnection dstDb) "backupInit"
 
 backupFinish :: Backup -> IO ()
 backupFinish backup@(Direct.Backup dstDb _) =
   Direct.backupFinish backup
-    >>= checkError (DetailDatabase dstDb) "backupFinish"
+    >>= checkError (DetailConnection dstDb) "backupFinish"
 
 backupStep :: Backup -> Int -> IO BackupStepResult
 backupStep backup pages =

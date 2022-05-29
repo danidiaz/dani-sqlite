@@ -27,13 +27,13 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 data TestEnv = TestEnv
-  { -- | Database shared by all the tests
-    conn :: Database,
+  { -- | Connection shared by all the tests
+    conn :: Connection,
     -- | Bracket for spawning an additional connection.
     --   This connection will be isolated from others.
-    withConn :: forall a. (Database -> IO a) -> IO a,
-    -- | Like 'withConn', but every invocation shares the same database.
-    withConnShared :: forall a. (Database -> IO a) -> IO a
+    withConn :: forall a. (Connection -> IO a) -> IO a,
+    -- | Like 'withConn', but every invocation shares the same Connection.
+    withConnShared :: forall a. (Connection -> IO a) -> IO a
   }
 
 regressionTests :: [IO TestEnv -> TestTree]
@@ -85,7 +85,7 @@ shouldFail action = do
     Left e -> return $ isUserError e
     Right _ -> return False
 
-withStmt :: Database -> Text -> (Statement -> IO a) -> IO a
+withStmt :: Connection -> Text -> (Statement -> IO a) -> IO a
 withStmt conn sql = bracket (prepare conn sql) finalize
 
 testExec :: IO TestEnv -> Assertion

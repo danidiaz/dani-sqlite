@@ -8,7 +8,7 @@
 module SQLite.Types (
     -- * Objects
     -- | <https://www.sqlite.org/c3ref/objlist.html>
-    CDatabase,
+    CConnection,
     CStatement,
     CValue,
     CContext,
@@ -235,8 +235,8 @@ data ColumnType = IntegerColumn
 
 -- | <https://www.sqlite.org/c3ref/sqlite3.html>
 --
--- @CDatabase@ = @sqlite3@
-data CDatabase
+-- @CConnection@ = @sqlite3@
+data CConnection
 
 -- | <https://www.sqlite.org/c3ref/stmt.html>
 --

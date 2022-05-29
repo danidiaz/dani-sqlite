@@ -1,3 +1,4 @@
+renamed "Database" to "Connection".
 
 incorporated fork of sqlite-simple!
 
