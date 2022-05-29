@@ -1,7 +1,7 @@
 dep-t-sqlite
 ============
 
-A fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite).
+An amalgamated fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite) and Janne Hellsten's [sqlite-simple](https://hackage.haskell.org/package/sqlite-simple).
 
 - Unlike **direct-sqlite**, it doesn't include the code for the C library, so
 you'll have to install the library separately.
@@ -67,5 +67,12 @@ to work on old GHCs.
 - [Closing A Database Connection](https://www.sqlite.org/c3ref/close.html)
 
   > Ideally, applications should finalize all prepared statements, close all BLOB handles, and finish all sqlite3_backup objects associated with the sqlite3 object prior to attempting to close the object.
+
+Acknowledgements
+================
+
+- Irene Knapp and the rest of contributors to [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite). 
+- Janne Hellsten and the rest of contributors to  [sqlite-simple](https://hackage.haskell.org/package/sqlite-simple).
+
 
 

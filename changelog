@@ -1,3 +1,8 @@
+
+incorporated fork of sqlite-simple!
+
+fork!
+
 v2.3.26:
 	* Add support for GHC 8.8 and Stackage LTS 15+
 
