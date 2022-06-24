@@ -18,6 +18,10 @@ you'll have to install the library separately.
 
 - Supports [extended result codes](https://www.sqlite.org/rescode.html).
 
+- Unlike **sqlite-simple**, this library doesn't have a time type.
+
+- Unlike **sqlite-simple**, this library doesn't have a quasiquoter.
+
 Links
 =====
 
