@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor      #-}
 
@@ -28,17 +27,13 @@
 --
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple.Ok where
+module SQLite.Query.Ok where
 
 import Control.Applicative
 import Control.Exception
 import Control.Monad (MonadPlus(..))
 import Control.Monad.Catch (MonadThrow, throwM)
 import Data.Typeable
-
-#if !MIN_VERSION_base(4,13,0) && MIN_VERSION_base(4,9,0)
-import Control.Monad.Fail
-#endif
 
 -- FIXME:   [SomeException] should probably be something else,  maybe
 --          a difference list (or a tree?)
@@ -73,18 +68,16 @@ instance MonadPlus Ok where
     mplus = (<|>)
 
 instance Monad Ok where
-    return = Ok
+    return = pure
 
     Errors es >>= _ = Errors es
     Ok a      >>= f = f a
 
-#if MIN_VERSION_base(4,9,0)
 instance MonadFail Ok where
     fail str = Errors [SomeException (ErrorCall str)]
 
 instance MonadThrow Ok where
     throwM = fail . show
-#endif
 
 -- | a way to reify a list of exceptions into a single exception
 
