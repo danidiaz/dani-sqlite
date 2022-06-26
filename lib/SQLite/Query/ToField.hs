@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor       #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 
 ------------------------------------------------------------------------------
@@ -16,22 +15,19 @@
 --
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple.ToField (ToField(..)) where
+module SQLite.Query.ToField (ToField(..)) where
 
-import           Blaze.ByteString.Builder (toByteString)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
 import           Data.Int (Int8, Int16, Int32, Int64)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Encoding as T
-import           Data.Time (Day, UTCTime)
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Float
 
-import           Database.SQLite3 as Base
-import           Database.SQLite.Simple.Types (Null)
-import           Database.SQLite.Simple.Time
+import           SQLite as Base
+import           SQLite.Query.Types (Null)
 
 -- | A type that may be used as a single parameter to a SQL query.
 class ToField a where
@@ -128,13 +124,13 @@ instance ToField LT.Text where
     toField = toField . LT.toStrict
     {-# INLINE toField #-}
 
-instance ToField UTCTime where
-    toField = SQLText . T.decodeUtf8 . toByteString . utcTimeToBuilder
-    {-# INLINE toField #-}
-
-instance ToField Day where
-    toField = SQLText . T.decodeUtf8 . toByteString . dayToBuilder
-    {-# INLINE toField #-}
+-- instance ToField UTCTime where
+--     toField = SQLText . T.decodeUtf8 . toByteString . utcTimeToBuilder
+--     {-# INLINE toField #-}
+-- 
+-- instance ToField Day where
+--     toField = SQLText . T.decodeUtf8 . toByteString . dayToBuilder
+--     {-# INLINE toField #-}
 
 -- TODO enable these
 --instance ToField ZonedTime where

@@ -29,6 +29,7 @@ library
                     SQLite.Types
                     SQLite.Query.Types
                     SQLite.Query.Ok
+                    SQLite.Query.ToField
                     SQLite.Query.Internal
   build-depends:    base       >= 4.16.1.0 && < 5
                   , bytestring >= 0.9.2.1
