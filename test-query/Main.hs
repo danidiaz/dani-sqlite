@@ -37,14 +37,14 @@ tests =
     , TestLabel "ParamConv" . testParamConvFromRow
     , TestLabel "ParamConv" . testParamConvComposite
     , TestLabel "ParamConv" . testParamNamed
- --   , TestLabel "Errors"    . testErrorsColumns
- --   , TestLabel "Errors"    . testErrorsInvalidParams
- --   , TestLabel "Errors"    . testErrorsInvalidNamedParams
- --   , TestLabel "Errors"    . testErrorsWithStatement
- --   , TestLabel "Errors"    . testErrorsColumnName
- --   , TestLabel "Errors"    . testErrorsTransaction
- --   , TestLabel "Errors"    . testErrorsImmediateTransaction
- --   , TestLabel "Errors"    . testErrorsExclusiveTransaction
+    , TestLabel "Errors"    . testErrorsColumns
+    , TestLabel "Errors"    . testErrorsInvalidParams
+    , TestLabel "Errors"    . testErrorsInvalidNamedParams
+    , TestLabel "Errors"    . testErrorsWithStatement
+    , TestLabel "Errors"    . testErrorsColumnName
+    , TestLabel "Errors"    . testErrorsTransaction
+    , TestLabel "Errors"    . testErrorsImmediateTransaction
+    , TestLabel "Errors"    . testErrorsExclusiveTransaction
     , TestLabel "Utf8"      . testUtf8Simplest
     , TestLabel "Utf8"      . testBlobs
     , TestLabel "Instances" . testUserFromField
