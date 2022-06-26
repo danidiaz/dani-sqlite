@@ -67,3 +67,35 @@ test-suite test
                       OverloadedStrings
                       DeriveDataTypeable
   ghc-options:        -Wall -threaded -fno-warn-name-shadowing -fno-warn-unused-do-bind
+
+test-suite test-query
+  default-language: Haskell2010
+  type:             exitcode-stdio-1.0
+
+  hs-source-dirs: test-query
+  main-is:        Main.hs
+  other-modules:  Common
+                , DirectSqlite
+                , Errors
+                , Fold
+                , ParamConv
+                , Query
+                , Statement
+                , TestImports
+                , UserInstances
+                , Utf8Strings
+
+  ghc-options: -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
+
+  default-extensions:
+      NamedFieldPuns
+    , OverloadedStrings
+    , Rank2Types
+    , RecordWildCards
+
+  build-depends: base
+               , base16-bytestring
+               , bytestring >= 0.9
+               , HUnit
+               , dep-t-sqlite
+               , text
