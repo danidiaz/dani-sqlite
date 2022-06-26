@@ -1,4 +1,4 @@
-{-# Language DefaultSignatures, FlexibleContexts, DeriveAnyClass,
+{-# LANGUAGE DefaultSignatures, FlexibleContexts, DeriveAnyClass,
   StandaloneDeriving #-}
 ------------------------------------------------------------------------------
 -- |
@@ -18,17 +18,17 @@
 --
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple.ToRow
+module SQLite.Query.ToRow
     ( GToRow(..)
     , ToRow(..)
     ) where
 
 import GHC.Generics
 
-import Database.SQLite.Simple.ToField (ToField(..))
-import Database.SQLite.Simple.Types (Only(..), (:.)(..))
+import SQLite.Query.ToField (ToField(..))
+import SQLite.Query.Types (Only(..), (:.)(..))
 
-import Database.SQLite3 (SQLData(..))
+import SQLite (SQLData(..))
 
 -- | Generic derivation of 'ToRow'.  For details about what can be
 -- derived refer to 'Database.Sqlite.Simple.FromRow.GFromRow'.
