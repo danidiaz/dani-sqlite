@@ -1,5 +1,4 @@
-
-{-# LANGUAGE CPP, DeriveDataTypeable, DeriveFunctor  #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor  #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 
@@ -25,7 +24,7 @@
 --
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple.FromField
+module SQLite.Query.FromField
     (
       FromField(..)
     , FieldParser
@@ -47,11 +46,10 @@ import           Data.Typeable (Typeable, typeOf)
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Float (double2Float)
 
-import           Database.SQLite3 as Base
-import           Database.SQLite.Simple.Types
-import           Database.SQLite.Simple.Internal
-import           Database.SQLite.Simple.Ok
-import           Database.SQLite.Simple.Time
+import           SQLite as Base
+import           SQLite.Query.Types
+import           SQLite.Query.Internal
+import           SQLite.Query.Ok
 
 -- | Exception thrown if conversion from a SQL value to a Haskell
 -- value fails.

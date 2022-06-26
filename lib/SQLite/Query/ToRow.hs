@@ -1,4 +1,4 @@
-{-# LANGUAGE DefaultSignatures, FlexibleContexts, DeriveAnyClass,
+{-# LANGUAGE DefaultSignatures, FlexibleContexts, DeriveAnyClass, TypeOperators,
   StandaloneDeriving #-}
 ------------------------------------------------------------------------------
 -- |
@@ -26,7 +26,7 @@ module SQLite.Query.ToRow
 import GHC.Generics
 
 import SQLite.Query.ToField (ToField(..))
-import SQLite.Query.Types (Only(..), (:.)(..))
+import SQLite.Query.Types (Solo(..), (:.)(..))
 
 import SQLite (SQLData(..))
 
@@ -64,7 +64,7 @@ class ToRow a where
     toRow a = gtoRow $ from a
 
 deriving instance ToRow ()
-deriving instance (ToField a) => ToRow (Only a)
+deriving instance (ToField a) => ToRow (Solo a)
 deriving instance (ToField a, ToField b) => ToRow (a,b)
 deriving instance (ToField a, ToField b, ToField c) => ToRow (a,b,c)
 deriving instance (ToField a, ToField b, ToField c, ToField d) => ToRow (a,b,c,d)
