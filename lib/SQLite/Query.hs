@@ -12,7 +12,7 @@
 --
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple (
+module SQLite.Query (
     -- ** Examples of use
     -- $use
 
@@ -50,17 +50,12 @@ module Database.SQLite.Simple (
   , Connection(..)
   , ToRow(..)
   , FromRow(..)
-  , Only(..)
+  , Solo(..)
   , (:.)(..)
   , Base.SQLData(..)
   , Statement(..)
   , ColumnIndex(..)
   , NamedParam(..)
-    -- * Connections
-  , open
-  , close
-  , withConnection
-  , setTrace
     -- * Queries that return results
   , query
   , query_
@@ -84,7 +79,6 @@ module Database.SQLite.Simple (
   , withTransaction
   , withImmediateTransaction
   , withExclusiveTransaction
-  , withSavepoint
     -- * Low-level statement API for stream access and prepared statements
   , openStatement
   , closeStatement
@@ -99,7 +93,7 @@ module Database.SQLite.Simple (
     -- ** Exceptions
   , FormatError(..)
   , ResultError(..)
-  , Base.SQLError(..)
+  , Base.SQLiteException(..)
   , Base.Error(..)
   ) where
 
@@ -112,17 +106,17 @@ import           Data.IORef
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
-import           Database.SQLite.Simple.Types
-import qualified Database.SQLite3 as Base
-import qualified Database.SQLite3.Direct as BaseD
+import           SQLite.Query.Types
+import qualified SQLite as Base
+import SQLite.Direct (Connection)
+import qualified SQLite.Direct as BaseD
 
-
-import           Database.SQLite.Simple.FromField (ResultError(..))
-import           Database.SQLite.Simple.FromRow
-import           Database.SQLite.Simple.Internal
-import           Database.SQLite.Simple.Ok
-import           Database.SQLite.Simple.ToField (ToField(..))
-import           Database.SQLite.Simple.ToRow (ToRow(..))
+import           SQLite.Query.FromField (ResultError(..))
+import           SQLite.Query.FromRow
+import           SQLite.Query.Internal
+import           SQLite.Query.Ok
+import           SQLite.Query.ToField (ToField(..))
+import           SQLite.Query.ToRow (ToRow(..))
 
 -- | An SQLite prepared statement.
 newtype Statement = Statement { unStatement :: Base.Statement }
@@ -156,40 +150,8 @@ data FormatError = FormatError {
 
 instance Exception FormatError
 
--- | Open a database connection to a given file.  Will throw an
--- exception if it cannot connect.
---
--- Every 'open' must be closed with a call to 'close'.
---
--- If you specify \":memory:\" or an empty string as the input filename,
--- then a private, temporary in-memory database is created for the
--- connection.  This database will vanish when you close the
--- connection.
-open :: String -> IO Connection
-open fname = Connection <$> Base.open (T.pack fname) <*> newIORef 0
-
--- | Close a database connection.
-close :: Connection -> IO ()
-close = Base.close . connectionHandle
-
--- | Opens a database connection, executes an action using this connection, and
--- closes the connection, even in the presence of exceptions.
-withConnection :: String -> (Connection -> IO a) -> IO a
-withConnection connString = bracket (open connString) close
-
 unUtf8 :: BaseD.Utf8 -> T.Text
 unUtf8 (BaseD.Utf8 bs) = TE.decodeUtf8 bs
-
--- | <http://www.sqlite.org/c3ref/profile.html>
---
--- Enable/disable tracing of SQL execution.  Tracing can be disabled
--- by setting 'Nothing' as the logger callback.
---
--- Warning: If the logger callback throws an exception, your whole
--- program may crash.  Enable only for debugging!
-setTrace :: Connection -> Maybe (T.Text -> IO ()) -> IO ()
-setTrace conn logger =
-  BaseD.setTrace (connectionHandle conn) (fmap (\lf -> lf . unUtf8) logger)
 
 -- | Binds parameters to a prepared statement. Once 'nextRow' returns 'Nothing',
 -- the statement must be reset with the 'reset' function before it can be
@@ -280,7 +242,7 @@ withBind stmt params io = do
 -- with 'nextRow'.
 openStatement :: Connection -> Query -> IO Statement
 openStatement conn (Query t) = do
-  stmt <- Base.prepare (connectionHandle conn) t
+  stmt <- Base.prepare (conn) t
   return $ Statement stmt
 
 -- | Closes a prepared statement.
@@ -543,21 +505,21 @@ withExclusiveTransaction conn action =
 --
 -- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
 lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = BaseD.lastInsertRowId . connectionHandle
+lastInsertRowId = BaseD.lastInsertRowId 
 
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
 -- Return the number of rows that were changed, inserted, or deleted
 -- by the most recent @INSERT@, @DELETE@, or @UPDATE@ statement.
 changes :: Connection -> IO Int
-changes = BaseD.changes . connectionHandle
+changes = BaseD.changes
 
 -- | <http://www.sqlite.org/c3ref/total_changes.html>
 --
 -- Return the total number of row changes caused by @INSERT@, @DELETE@,
 -- or @UPDATE@ statements since the 'Database' was opened.
 totalChanges :: Connection -> IO Int
-totalChanges = BaseD.totalChanges . connectionHandle
+totalChanges = BaseD.totalChanges
 
 -- | Run an IO action inside a SQL transaction started with @BEGIN
 -- TRANSACTION@.  If the action throws any kind of an exception, the
@@ -566,19 +528,6 @@ totalChanges = BaseD.totalChanges . connectionHandle
 withTransaction :: Connection -> IO a -> IO a
 withTransaction conn action =
   withTransactionPrivate conn action Deferred
-
--- | Run an IO action inside an SQLite @SAVEPOINT@. If the action throws any
--- kind of an exception, the transaction will be rolled back to the savepoint
--- with @ROLLBACK TO@. Otherwise the results are released to the outer
--- transaction if any with @RELEASE@.
---
--- See <https://sqlite.org/lang_savepoint.html> for a full description of
--- savepoint semantics.
-withSavepoint :: Connection -> IO a -> IO a
-withSavepoint conn action = do
-  n <- atomicModifyIORef' (connectionTempNameCounter conn) $ \n -> (n + 1, n)
-  withTransactionPrivate conn action $
-    Savepoint $ "sqlite_simple_savepoint_" <> T.pack (show n)
 
 fmtError :: Show v => String -> Query -> [v] -> a
 fmtError msg q xs =

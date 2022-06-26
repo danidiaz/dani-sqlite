@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, DefaultSignatures, FlexibleContexts,
+{-# LANGUAGE RecordWildCards, DefaultSignatures, FlexibleContexts, TypeOperators,
   StandaloneDeriving #-}
 
 ------------------------------------------------------------------------------
@@ -123,8 +123,8 @@ fieldWith fieldP = RP $ do
       lift (lift (Errors [SomeException (ColumnOutOfBounds (column+1))]))
     else do
       let r = head remaining
-          field = Field r column
-      lift (lift (fieldP field))
+          field' = Field r column
+      lift (lift (fieldP field'))
 
 field :: FromField a => RowParser a
 field = fieldWith fromField
@@ -135,8 +135,8 @@ numFieldsRemaining = RP $ do
   (columnIdx,_) <- lift get
   return $! ncols - columnIdx
 
-instance (FromField a) => FromRow (Only a) where
-    fromRow = Only <$> field
+instance (FromField a) => FromRow (Solo a) where
+    fromRow = Solo <$> field
 
 instance (FromField a, FromField b) => FromRow (a,b) where
     fromRow = (,) <$> field <*> field

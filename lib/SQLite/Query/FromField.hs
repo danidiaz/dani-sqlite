@@ -39,7 +39,6 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy as LB
 import           Data.Int (Int8, Int16, Int32, Int64)
-import           Data.Time (UTCTime, Day)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import           Data.Typeable (Typeable, typeOf)
@@ -176,23 +175,6 @@ instance FromField ByteString where
 instance FromField LB.ByteString where
   fromField (Field (SQLBlob blb) _) = Ok . LB.fromChunks $ [blb]
   fromField f                       = returnError ConversionFailed f "expecting SQLBlob column type"
-
-instance FromField UTCTime where
-  fromField f@(Field (SQLText t) _) =
-    case parseUTCTime t of
-      Right t -> Ok t
-      Left e -> returnError ConversionFailed f ("couldn't parse UTCTime field: " ++ e)
-
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
-
-
-instance FromField Day where
-  fromField f@(Field (SQLText t) _) =
-    case parseDay t of
-      Right t -> Ok t
-      Left e -> returnError ConversionFailed f ("couldn't parse Day field: " ++ e)
-
-  fromField f = returnError ConversionFailed f "expecting SQLText column type"
 
 instance FromField SQLData where
   fromField f = Ok (fieldData f)
