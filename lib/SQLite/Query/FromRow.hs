@@ -17,7 +17,7 @@
 -- elements.
 ------------------------------------------------------------------------------
 
-module Database.SQLite.Simple.FromRow
+module SQLite.Query.FromRow
      ( GFromRow(..)
      , FromRow(..)
      , RowParser
@@ -33,10 +33,10 @@ import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Class
 import           GHC.Generics
 
-import           Database.SQLite.Simple.FromField
-import           Database.SQLite.Simple.Internal
-import           Database.SQLite.Simple.Ok
-import           Database.SQLite.Simple.Types
+import           SQLite.Query.FromField
+import           SQLite.Query.Internal
+import           SQLite.Query.Ok
+import           SQLite.Query.Types
 
 
 -- | Generic derivation of 'FromRow'.
