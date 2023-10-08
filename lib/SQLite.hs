@@ -120,7 +120,7 @@ module SQLite
 
     -- * Types
     Connection,
-    Statement,
+    PreparedStatement,
     SQLData (..),
     SQLiteException (..),
     ColumnType (..),
@@ -175,7 +175,7 @@ import SQLite.Direct
     FuncArgs,
     FuncContext,
     ParamIndex (..),
-    Statement,
+    PreparedStatement,
     StepResult (..),
     Utf8 (..),
     backupPagecount,
@@ -266,7 +266,7 @@ toUtf8 = Utf8 . encodeUtf8
 
 data DetailSource
   = DetailConnection Connection
-  | DetailStatement Statement
+  | DetailStatement PreparedStatement
   | DetailMessage Utf8
 
 renderDetailSource :: DetailSource -> IO Utf8
@@ -427,7 +427,7 @@ type ExecCallback =
 -- subsequent statements.
 --
 -- If the query string contains no SQL statements, this 'fail's.
-prepare :: Connection -> Text -> IO Statement
+prepare :: Connection -> Text -> IO PreparedStatement
 prepare db sql = prepareUtf8 db (toUtf8 sql)
 
 -- | <https://www.sqlite.org/c3ref/prepare.html>
@@ -436,7 +436,7 @@ prepare db sql = prepareUtf8 db (toUtf8 sql)
 -- have Utf8
 --
 -- If the query string contains no SQL statements, this 'fail's.
-prepareUtf8 :: Connection -> Utf8 -> IO Statement
+prepareUtf8 :: Connection -> Utf8 -> IO PreparedStatement
 prepareUtf8 db sql = do
   m <-
     Direct.prepare db sql
@@ -446,7 +446,7 @@ prepareUtf8 db sql = do
     Just stmt -> return stmt
 
 -- | <https://www.sqlite.org/c3ref/step.html>
-step :: Statement -> IO StepResult
+step :: PreparedStatement -> IO StepResult
 step statement =
   Direct.step statement >>= checkError (DetailStatement statement) "step"
 
@@ -454,7 +454,7 @@ step statement =
 --
 -- Faster step for statements that don't callback to Haskell
 -- functions (e.g. by using custom SQL functions).
-stepNoCB :: Statement -> IO StepResult
+stepNoCB :: PreparedStatement -> IO StepResult
 stepNoCB statement =
   Direct.stepNoCB statement >>= checkError (DetailStatement statement) "stepNoCB"
 
@@ -483,7 +483,7 @@ stepNoCB statement =
 -- Note that in the C API, @sqlite3_reset@ returns an error code if the most
 -- recent @sqlite3_step@ indicated an error.  We do not replicate that behavior
 -- here.  'reset' never throws an exception.
-reset :: Statement -> IO ()
+reset :: PreparedStatement -> IO ()
 reset statement = do
   _ <- Direct.reset statement
   return ()
@@ -491,7 +491,7 @@ reset statement = do
 -- | <https://www.sqlite.org/c3ref/finalize.html>
 --
 -- Like 'reset', 'finalize' never throws an exception.
-finalize :: Statement -> IO ()
+finalize :: PreparedStatement -> IO ()
 finalize statement = do
   _ <- Direct.finalize statement
   return ()
@@ -505,7 +505,7 @@ finalize statement = do
 -- @Nothing@.
 --
 -- Note that the parameter index starts at 1, not 0.
-bindParameterName :: Statement -> ParamIndex -> IO (Maybe Text)
+bindParameterName :: PreparedStatement -> ParamIndex -> IO (Maybe Text)
 bindParameterName stmt idx = do
   m <- Direct.bindParameterName stmt idx
   case m of
@@ -518,7 +518,7 @@ bindParameterName stmt idx = do
 --
 -- Return the name of a result column.  If the column index is out of range,
 -- return 'Nothing'.
-columnName :: Statement -> ColumnIndex -> IO (Maybe Text)
+columnName :: PreparedStatement -> ColumnIndex -> IO (Maybe Text)
 columnName stmt idx = do
   m <- Direct.columnName stmt idx
   case m of
@@ -539,22 +539,22 @@ columnName stmt idx = do
           sqliteErrorContext = "column name"
         }
 
-bindBlob :: Statement -> ParamIndex -> ByteString -> IO ()
+bindBlob :: PreparedStatement -> ParamIndex -> ByteString -> IO ()
 bindBlob statement parameterIndex byteString =
   Direct.bindBlob statement parameterIndex byteString
     >>= checkError (DetailStatement statement) "bind blob"
 
-bindZeroBlob :: Statement -> ParamIndex -> Int -> IO ()
+bindZeroBlob :: PreparedStatement -> ParamIndex -> Int -> IO ()
 bindZeroBlob statement parameterIndex len =
   Direct.bindZeroBlob statement parameterIndex len
     >>= checkError (DetailStatement statement) "bind zeroblob"
 
-bindDouble :: Statement -> ParamIndex -> Double -> IO ()
+bindDouble :: PreparedStatement -> ParamIndex -> Double -> IO ()
 bindDouble statement parameterIndex datum =
   Direct.bindDouble statement parameterIndex datum
     >>= checkError (DetailStatement statement) "bind double"
 
-bindInt :: Statement -> ParamIndex -> Int -> IO ()
+bindInt :: PreparedStatement -> ParamIndex -> Int -> IO ()
 bindInt statement parameterIndex datum =
   Direct.bindInt64
     statement
@@ -562,17 +562,17 @@ bindInt statement parameterIndex datum =
     (fromIntegral datum)
     >>= checkError (DetailStatement statement) "bind int"
 
-bindInt64 :: Statement -> ParamIndex -> Int64 -> IO ()
+bindInt64 :: PreparedStatement -> ParamIndex -> Int64 -> IO ()
 bindInt64 statement parameterIndex datum =
   Direct.bindInt64 statement parameterIndex datum
     >>= checkError (DetailStatement statement) "bind int64"
 
-bindNull :: Statement -> ParamIndex -> IO ()
+bindNull :: PreparedStatement -> ParamIndex -> IO ()
 bindNull statement parameterIndex =
   Direct.bindNull statement parameterIndex
     >>= checkError (DetailStatement statement) "bind null"
 
-bindText :: Statement -> ParamIndex -> Text -> IO ()
+bindText :: PreparedStatement -> ParamIndex -> Text -> IO ()
 bindText statement parameterIndex text =
   Direct.bindText statement parameterIndex (toUtf8 text)
     >>= checkError (DetailStatement statement) "bind text"
@@ -590,7 +590,7 @@ bindText statement parameterIndex text =
 -- >*** Exception: SQLite3 returned ErrorRange while attempting to perform bind int64.
 -- >> step stmt >> columns stmt
 -- >[SQLInteger 1,SQLNull,SQLNull]
-bindSQLData :: Statement -> ParamIndex -> SQLData -> IO ()
+bindSQLData :: PreparedStatement -> ParamIndex -> SQLData -> IO ()
 bindSQLData statement idx datum =
   case datum of
     SQLInteger v -> bindInt64 statement idx v
@@ -601,7 +601,7 @@ bindSQLData statement idx datum =
 
 -- | Convenience function for binding values to all parameters.  This will
 -- 'fail' if the list has the wrong number of parameters.
-bind :: Statement -> [SQLData] -> IO ()
+bind :: PreparedStatement -> [SQLData] -> IO ()
 bind statement sqlData = do
   ParamIndex nParams <- bindParameterCount statement
   when (nParams /= length sqlData) $
@@ -625,7 +625,7 @@ bind statement sqlData = do
 -- stmt <- prepare conn \"SELECT :foo + :bar\"
 -- bindNamed stmt [(\":foo\", SQLInteger 1), (\":bar\", SQLInteger 2)]
 -- @
-bindNamed :: Statement -> [(T.Text, SQLData)] -> IO ()
+bindNamed :: PreparedStatement -> [(T.Text, SQLData)] -> IO ()
 bindNamed statement params = do
   ParamIndex nParams <- bindParameterCount statement
   when (nParams /= length params) $
@@ -650,22 +650,22 @@ bindNamed statement params = do
 -- | This will throw a 'DecodeError' if the datum contains invalid UTF-8.
 -- If this behavior is undesirable, you can use 'Direct.columnText' from
 -- "Database.SQLite3.Direct", which does not perform conversion to 'Text'.
-columnText :: Statement -> ColumnIndex -> IO Text
+columnText :: PreparedStatement -> ColumnIndex -> IO Text
 columnText statement columnIndex =
   Direct.columnText statement columnIndex
     >>= fromUtf8 "Database.SQLite3.columnText: Invalid UTF-8"
 
-column :: Statement -> ColumnIndex -> IO SQLData
+column :: PreparedStatement -> ColumnIndex -> IO SQLData
 column statement idx = do
   theType <- columnType statement idx
   typedColumn theType statement idx
 
-columns :: Statement -> IO [SQLData]
+columns :: PreparedStatement -> IO [SQLData]
 columns statement = do
   count <- columnCount statement
   mapM (column statement) [0 .. count -1]
 
-typedColumn :: ColumnType -> Statement -> ColumnIndex -> IO SQLData
+typedColumn :: ColumnType -> PreparedStatement -> ColumnIndex -> IO SQLData
 typedColumn theType statement idx = case theType of
   IntegerColumn -> SQLInteger <$> columnInt64 statement idx
   FloatColumn -> SQLFloat <$> columnDouble statement idx
@@ -677,7 +677,7 @@ typedColumn theType statement idx = case theType of
 -- If passed types do not correspond to the actual types, the values will be
 -- converted according to the rules at <https://www.sqlite.org/c3ref/column_blob.html>.
 -- If the list contains more items that number of columns, the result is undefined.
-typedColumns :: Statement -> [Maybe ColumnType] -> IO [SQLData]
+typedColumns :: PreparedStatement -> [Maybe ColumnType] -> IO [SQLData]
 typedColumns statement = zipWithM f [0 ..]
   where
     f idx theType = case theType of

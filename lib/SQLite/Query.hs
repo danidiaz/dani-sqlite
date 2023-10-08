@@ -50,7 +50,7 @@ module SQLite.Query (
   , Solo(..)
   , (:.)(..)
   , Base.SQLData(..)
-  , Statement(..)
+  , PreparedStatement(..)
   , ColumnIndex(..)
   , NamedParam(..)
     -- * Queries that return results
@@ -116,7 +116,7 @@ import           SQLite.Query.ToField (ToField(..))
 import           SQLite.Query.ToRow (ToRow(..))
 
 -- | An SQLite prepared statement.
-newtype Statement = Statement { unStatement :: Base.Statement }
+newtype PreparedStatement = PreparedStatement { unPreparedStatement :: Base.PreparedStatement }
 
 -- | Index of a column in a result set. Column indices start from 0.
 newtype ColumnIndex = ColumnIndex BaseD.ColumnIndex
@@ -153,8 +153,8 @@ unUtf8 (BaseD.Utf8 bs) = TE.decodeUtf8 bs
 -- | Binds parameters to a prepared statement. Once 'nextRow' returns 'Nothing',
 -- the statement must be reset with the 'reset' function before it can be
 -- executed again by calling 'nextRow'.
-bind :: (ToRow params) => Statement -> params -> IO ()
-bind (Statement stmt) params = do
+bind :: (ToRow params) => PreparedStatement -> params -> IO ()
+bind (PreparedStatement stmt) params = do
   let qp = toRow params
   stmtParamCount <- Base.bindParameterCount stmt
   when (length qp /= fromIntegral stmtParamCount) (throwColumnMismatch qp stmtParamCount)
@@ -175,8 +175,8 @@ bind (Statement stmt) params = do
         Nothing -> return $! ()
 
 -- | Binds named parameters to a prepared statement.
-bindNamed :: Statement -> [NamedParam] -> IO ()
-bindNamed (Statement stmt) params = do
+bindNamed :: PreparedStatement -> [NamedParam] -> IO ()
+bindNamed (PreparedStatement stmt) params = do
   stmtParamCount <- Base.bindParameterCount stmt
   when (length params /= fromIntegral stmtParamCount) $ throwColumnMismatch stmtParamCount
   bind stmt params
@@ -200,24 +200,24 @@ bindNamed (Statement stmt) params = do
 
 -- | Resets a statement. This does not reset bound parameters, if any, but
 -- allows the statement to be reexecuted again by invoking 'nextRow'.
-reset :: Statement -> IO ()
-reset (Statement stmt) = Base.reset stmt
+reset :: PreparedStatement -> IO ()
+reset (PreparedStatement stmt) = Base.reset stmt
 
 -- | Return the name of a a particular column in the result set of a
--- 'Statement'.  Throws an 'ArrayException' if the colum index is out
+-- 'PreparedStatement'.  Throws an 'ArrayException' if the colum index is out
 -- of bounds.
 --
 -- <http://www.sqlite.org/c3ref/column_name.html>
-columnName :: Statement -> ColumnIndex -> IO T.Text
-columnName (Statement stmt) (ColumnIndex n) = BaseD.columnName stmt n >>= takeUtf8
+columnName :: PreparedStatement -> ColumnIndex -> IO T.Text
+columnName (PreparedStatement stmt) (ColumnIndex n) = BaseD.columnName stmt n >>= takeUtf8
   where
     takeUtf8 (Just s) = return $ unUtf8 s
     takeUtf8 Nothing  =
       throwIO (IndexOutOfBounds ("Column index " ++ show n ++ " out of bounds"))
 
 -- | Return number of columns in the query
-columnCount :: Statement -> IO ColumnIndex
-columnCount (Statement stmt) = ColumnIndex <$> BaseD.columnCount stmt
+columnCount :: PreparedStatement -> IO ColumnIndex
+columnCount (PreparedStatement stmt) = ColumnIndex <$> BaseD.columnCount stmt
 
 -- | Binds parameters to a prepared statement, and 'reset's the statement when
 -- the callback completes, even in the presence of exceptions.
@@ -227,7 +227,7 @@ columnCount (Statement stmt) = ColumnIndex <$> BaseD.columnCount stmt
 -- transactions.  SQLite creates an implicit transaction if you don't say
 -- @BEGIN@ explicitly, and does not commit it until all active statements are
 -- finished with either 'reset' or 'closeStatement'.
-withBind :: (ToRow params) => Statement -> params -> IO a -> IO a
+withBind :: (ToRow params) => PreparedStatement -> params -> IO a -> IO a
 withBind stmt params io = do
   bind stmt params
   io `finally` reset stmt
@@ -237,18 +237,18 @@ withBind stmt params io = do
 -- 'nextRow' to iterate on the values returned. Once 'nextRow' returns
 -- 'Nothing', you need to invoke 'reset' before reexecuting the statement again
 -- with 'nextRow'.
-openStatement :: Connection -> Query -> IO Statement
+openStatement :: Connection -> Query -> IO PreparedStatement
 openStatement conn (Query t) = do
   stmt <- Base.prepare (conn) t
-  return $ Statement stmt
+  return $ PreparedStatement stmt
 
 -- | Closes a prepared statement.
-closeStatement :: Statement -> IO ()
-closeStatement (Statement stmt) = Base.finalize stmt
+closeStatement :: PreparedStatement -> IO ()
+closeStatement (PreparedStatement stmt) = Base.finalize stmt
 
 -- | Opens a prepared statement, executes an action using this statement, and
 -- closes the statement, even in the presence of exceptions.
-withStatement :: Connection -> Query -> (Statement -> IO a) -> IO a
+withStatement :: Connection -> Query -> (PreparedStatement -> IO a) -> IO a
 withStatement conn query = bracket (openStatement conn query) closeStatement
 
 -- A version of 'withStatement' which binds parameters.
@@ -256,7 +256,7 @@ withStatementParams :: (ToRow params)
                        => Connection
                        -> Query
                        -> params
-                       -> (Statement -> IO a)
+                       -> (PreparedStatement -> IO a)
                        -> IO a
 withStatementParams conn template params action =
   withStatement conn template $ \stmt ->
@@ -268,7 +268,7 @@ withStatementParams conn template params action =
 withStatementNamedParams :: Connection
                          -> Query
                          -> [NamedParam]
-                         -> (Statement -> IO a)
+                         -> (PreparedStatement -> IO a)
                          -> IO a
 withStatementNamedParams conn template namedParams action =
   withStatement conn template $ \stmt -> bindNamed stmt namedParams >> action stmt
@@ -279,7 +279,7 @@ withStatementNamedParams conn template namedParams action =
 -- Throws 'FormatError' if the query could not be formatted correctly.
 execute :: (ToRow q) => Connection -> Query -> q -> IO ()
 execute conn template qs =
-  withStatementParams conn template qs $ \(Statement stmt) ->
+  withStatementParams conn template qs $ \(PreparedStatement stmt) ->
     void . Base.step $ stmt
 
 -- | Execute a multi-row @INSERT@, @UPDATE@, or other SQL query that is not
@@ -288,13 +288,13 @@ execute conn template qs =
 -- Throws 'FormatError' if the query could not be formatted correctly.
 executeMany :: ToRow q => Connection -> Query -> [q] -> IO ()
 executeMany conn template paramRows = withStatement conn template $ \stmt -> do
-  let Statement stmt' = stmt
+  let PreparedStatement stmt' = stmt
   forM_ paramRows $ \params ->
     withBind stmt params
       (void . Base.step $ stmt')
 
 
-doFoldToList :: RowParser row -> Statement -> IO [row]
+doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
   fmap reverse $ doFold fromRow_ stmt [] (\acc e -> return (e : acc))
 
@@ -344,14 +344,14 @@ queryNamed conn templ params =
 -- | A version of 'execute' that does not perform query substitution.
 execute_ :: Connection -> Query -> IO ()
 execute_ conn template =
-  withStatement conn template $ \(Statement stmt) ->
+  withStatement conn template $ \(PreparedStatement stmt) ->
     void $ Base.step stmt
 
 -- | A version of 'execute' where the query parameters (placeholders)
 -- are named.
 executeNamed :: Connection -> Query -> [NamedParam] -> IO ()
 executeNamed conn template params =
-  withStatementNamedParams conn template params $ \(Statement stmt) ->
+  withStatementNamedParams conn template params $ \(PreparedStatement stmt) ->
     void $ Base.step stmt
 
 -- | Perform a @SELECT@ or other SQL query that is expected to return results.
@@ -401,7 +401,7 @@ foldNamed conn query params initalState action =
   withStatementNamedParams conn query params $ \stmt ->
     doFold fromRow stmt initalState action
 
-doFold :: RowParser row -> Statement ->  a -> (a -> row -> IO a) -> IO a
+doFold :: RowParser row -> PreparedStatement ->  a -> (a -> row -> IO a) -> IO a
 doFold fromRow_ stmt initState action =
   loop initState
   where
@@ -414,11 +414,11 @@ doFold fromRow_ stmt initState action =
         Nothing   -> return val
 
 -- | Extracts the next row from the prepared statement.
-nextRow :: (FromRow r) => Statement -> IO (Maybe r)
+nextRow :: (FromRow r) => PreparedStatement -> IO (Maybe r)
 nextRow = nextRowWith fromRow
 
-nextRowWith :: RowParser r -> Statement -> IO (Maybe r)
-nextRowWith fromRow_ (Statement stmt) = do
+nextRowWith :: RowParser r -> PreparedStatement -> IO (Maybe r)
+nextRowWith fromRow_ (PreparedStatement stmt) = do
   statRes <- Base.step stmt
   case statRes of
     Base.Row -> do
@@ -534,7 +534,7 @@ fmtError msg q xs =
     , fmtParams   = map show xs
     }
 
-getQuery :: Base.Statement -> IO Query
+getQuery :: Base.PreparedStatement -> IO Query
 getQuery stmt =
   toQuery <$> BaseD.statementSql stmt
   where
