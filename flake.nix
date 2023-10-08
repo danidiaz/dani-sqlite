@@ -18,7 +18,9 @@
       devShells.x86_64-linux.default = pkgs.mkShell {
         buildInputs = [
           pkgs.cabal-install 
-          (pkgs.haskellPackages.ghcWithPackages (hpkgs : [])) 
+          (pkgs.haskellPackages.ghcWithPackages (hpkgs : [
+            hpkgs.wai-app-static
+          ])) 
           pkgs.haskell-language-server
           pkgs.ormolu
           pkgs.sqlite

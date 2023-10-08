@@ -1,3 +1,6 @@
+moved the bindings modules and the direct module to their own public
+sublibraries.
+
 library renamed to "dani-sqlite"
 
 renamed "Database" to "Connection".
