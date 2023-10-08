@@ -318,9 +318,6 @@ executeMany conn template paramRows = withStatement conn template $ \stmt -> do
       params
       (void . Sqlite.step $ stmt)
 
-doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
-doFoldToList fromRow_ stmt =
-  fmap reverse $ doFold fromRow_ stmt [] (\acc e -> return (e : acc))
 
 -- | Perform a @SELECT@ or other Sql query that is expected to return
 -- results. All results are retrieved and converted before this
@@ -405,6 +402,10 @@ fold ::
 fold conn query params initalState action =
   withStatementParams conn query params $ \stmt ->
     doFold fromRow stmt initalState action
+
+doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
+doFoldToList fromRow_ stmt =
+  fmap reverse $ doFold fromRow_ stmt [] (\acc e -> return (e : acc))
 
 -- | A version of 'fold' which does not perform parameter substitution.
 fold_ ::
