@@ -1,4 +1,8 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings, GeneralizedNewtypeDeriving, ScopedTypeVariables, GADTs #-}
+{-# LANGUAGE 
+            OverloadedStrings,
+            ScopedTypeVariables, 
+            ImportQualifiedPost,
+            GADTs #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -49,9 +53,9 @@ module SQLite.Query (
   , FromRow(..)
   , Solo(..)
   , (:.)(..)
-  , Base.SQLData(..)
-  , PreparedStatement(..)
-  , ColumnIndex(..)
+  , SQLData(..)
+  , PreparedStatement
+  , ColumnIndex (..)
   , NamedParam(..)
     -- * Queries that return results
   , query
@@ -90,8 +94,8 @@ module SQLite.Query (
     -- ** Exceptions
   , FormatError(..)
   , ResultError(..)
-  , Base.SQLiteException(..)
-  , Base.Error(..)
+  , SQLite.SQLiteException(..)
+  , SQLite.Error(..)
   ) where
 
 import           Control.Exception
@@ -99,14 +103,14 @@ import           Control.Monad (void, when, forM_)
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.State.Strict
 import           Data.Int (Int64)
-import           Data.IORef
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
 import           SQLite.Query.Types
-import qualified SQLite as Base
+import SQLite (PreparedStatement, ColumnIndex, SQLData)
+import SQLite qualified
 import SQLite.Direct (Connection)
-import qualified SQLite.Direct as BaseD
+import SQLite.Direct qualified 
 
 import           SQLite.Query.FromField (ResultError(..))
 import           SQLite.Query.FromRow
@@ -114,13 +118,6 @@ import           SQLite.Query.Internal
 import           SQLite.Query.Ok
 import           SQLite.Query.ToField (ToField(..))
 import           SQLite.Query.ToRow (ToRow(..))
-
--- | An SQLite prepared statement.
-newtype PreparedStatement = PreparedStatement { unPreparedStatement :: Base.PreparedStatement }
-
--- | Index of a column in a result set. Column indices start from 0.
-newtype ColumnIndex = ColumnIndex BaseD.ColumnIndex
-    deriving (Eq, Ord, Enum, Num, Real, Integral)
 
 data NamedParam where
     (:=) :: (ToField v) => T.Text -> v -> NamedParam
@@ -147,19 +144,19 @@ data FormatError = FormatError {
 
 instance Exception FormatError
 
-unUtf8 :: BaseD.Utf8 -> T.Text
-unUtf8 (BaseD.Utf8 bs) = TE.decodeUtf8 bs
+unUtf8 :: SQLite.Direct.Utf8 -> T.Text
+unUtf8 (SQLite.Direct.Utf8 bs) = TE.decodeUtf8 bs
 
 -- | Binds parameters to a prepared statement. Once 'nextRow' returns 'Nothing',
 -- the statement must be reset with the 'reset' function before it can be
 -- executed again by calling 'nextRow'.
 bind :: (ToRow params) => PreparedStatement -> params -> IO ()
-bind (PreparedStatement stmt) params = do
+bind stmt params = do
   let qp = toRow params
-  stmtParamCount <- Base.bindParameterCount stmt
+  stmtParamCount <- SQLite.bindParameterCount stmt
   when (length qp /= fromIntegral stmtParamCount) (throwColumnMismatch qp stmtParamCount)
   mapM_ (errorCheckParamName qp) [1..stmtParamCount]
-  Base.bind stmt qp
+  SQLite.bind stmt qp
   where
     throwColumnMismatch qp nParams = do
       templ <- getQuery stmt
@@ -167,7 +164,7 @@ bind (PreparedStatement stmt) params = do
                 show (length qp) ++ " arguments given") templ qp
     errorCheckParamName qp paramNdx = do
       templ <- getQuery stmt
-      name <- Base.bindParameterName stmt paramNdx
+      name <- SQLite.bindParameterName stmt paramNdx
       case name of
         Just n ->
           fmtError ("Only unnamed '?' query parameters are accepted, '"++T.unpack n++"' given")
@@ -176,17 +173,17 @@ bind (PreparedStatement stmt) params = do
 
 -- | Binds named parameters to a prepared statement.
 bindNamed :: PreparedStatement -> [NamedParam] -> IO ()
-bindNamed (PreparedStatement stmt) params = do
-  stmtParamCount <- Base.bindParameterCount stmt
+bindNamed stmt params = do
+  stmtParamCount <- SQLite.bindParameterCount stmt
   when (length params /= fromIntegral stmtParamCount) $ throwColumnMismatch stmtParamCount
   bind stmt params
   where
     bind stmt params =
       mapM_ (\(n := v) -> do
-              idx <- BaseD.bindParameterIndex stmt (BaseD.Utf8 . TE.encodeUtf8 $ n)
+              idx <- SQLite.Direct.bindParameterIndex stmt (SQLite.Direct.Utf8 . TE.encodeUtf8 $ n)
               case idx of
                 Just i ->
-                  Base.bindSQLData stmt i (toField v)
+                  SQLite.bindSQLData stmt i (toField v)
                 Nothing -> do
                   templ <- getQuery stmt
                   fmtError ("Unknown named parameter '" ++ T.unpack n ++ "'")
@@ -201,7 +198,7 @@ bindNamed (PreparedStatement stmt) params = do
 -- | Resets a statement. This does not reset bound parameters, if any, but
 -- allows the statement to be reexecuted again by invoking 'nextRow'.
 reset :: PreparedStatement -> IO ()
-reset (PreparedStatement stmt) = Base.reset stmt
+reset  stmt = SQLite.reset stmt
 
 -- | Return the name of a a particular column in the result set of a
 -- 'PreparedStatement'.  Throws an 'ArrayException' if the colum index is out
@@ -209,7 +206,7 @@ reset (PreparedStatement stmt) = Base.reset stmt
 --
 -- <http://www.sqlite.org/c3ref/column_name.html>
 columnName :: PreparedStatement -> ColumnIndex -> IO T.Text
-columnName (PreparedStatement stmt) (ColumnIndex n) = BaseD.columnName stmt n >>= takeUtf8
+columnName  stmt n = SQLite.Direct.columnName stmt n >>= takeUtf8
   where
     takeUtf8 (Just s) = return $ unUtf8 s
     takeUtf8 Nothing  =
@@ -217,7 +214,7 @@ columnName (PreparedStatement stmt) (ColumnIndex n) = BaseD.columnName stmt n >>
 
 -- | Return number of columns in the query
 columnCount :: PreparedStatement -> IO ColumnIndex
-columnCount (PreparedStatement stmt) = ColumnIndex <$> BaseD.columnCount stmt
+columnCount  stmt = SQLite.Direct.columnCount stmt
 
 -- | Binds parameters to a prepared statement, and 'reset's the statement when
 -- the callback completes, even in the presence of exceptions.
@@ -239,12 +236,11 @@ withBind stmt params io = do
 -- with 'nextRow'.
 openStatement :: Connection -> Query -> IO PreparedStatement
 openStatement conn (Query t) = do
-  stmt <- Base.prepare (conn) t
-  return $ PreparedStatement stmt
+  SQLite.prepare conn t
 
 -- | Closes a prepared statement.
 closeStatement :: PreparedStatement -> IO ()
-closeStatement (PreparedStatement stmt) = Base.finalize stmt
+closeStatement  stmt = SQLite.finalize stmt
 
 -- | Opens a prepared statement, executes an action using this statement, and
 -- closes the statement, even in the presence of exceptions.
@@ -279,8 +275,8 @@ withStatementNamedParams conn template namedParams action =
 -- Throws 'FormatError' if the query could not be formatted correctly.
 execute :: (ToRow q) => Connection -> Query -> q -> IO ()
 execute conn template qs =
-  withStatementParams conn template qs $ \(PreparedStatement stmt) ->
-    void . Base.step $ stmt
+  withStatementParams conn template qs $ \stmt ->
+    void . SQLite.step $ stmt
 
 -- | Execute a multi-row @INSERT@, @UPDATE@, or other SQL query that is not
 -- expected to return results.
@@ -288,10 +284,9 @@ execute conn template qs =
 -- Throws 'FormatError' if the query could not be formatted correctly.
 executeMany :: ToRow q => Connection -> Query -> [q] -> IO ()
 executeMany conn template paramRows = withStatement conn template $ \stmt -> do
-  let PreparedStatement stmt' = stmt
   forM_ paramRows $ \params ->
     withBind stmt params
-      (void . Base.step $ stmt')
+      (void . SQLite.step $ stmt)
 
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
@@ -344,15 +339,15 @@ queryNamed conn templ params =
 -- | A version of 'execute' that does not perform query substitution.
 execute_ :: Connection -> Query -> IO ()
 execute_ conn template =
-  withStatement conn template $ \(PreparedStatement stmt) ->
-    void $ Base.step stmt
+  withStatement conn template $ \stmt ->
+    void $ SQLite.step stmt
 
 -- | A version of 'execute' where the query parameters (placeholders)
 -- are named.
 executeNamed :: Connection -> Query -> [NamedParam] -> IO ()
 executeNamed conn template params =
-  withStatementNamedParams conn template params $ \(PreparedStatement stmt) ->
-    void $ Base.step stmt
+  withStatementNamedParams conn template params $ \stmt ->
+    void $ SQLite.step stmt
 
 -- | Perform a @SELECT@ or other SQL query that is expected to return results.
 -- Results are converted and fed into the 'action' callback as they are being
@@ -418,17 +413,17 @@ nextRow :: (FromRow r) => PreparedStatement -> IO (Maybe r)
 nextRow = nextRowWith fromRow
 
 nextRowWith :: RowParser r -> PreparedStatement -> IO (Maybe r)
-nextRowWith fromRow_ (PreparedStatement stmt) = do
-  statRes <- Base.step stmt
+nextRowWith fromRow_  stmt = do
+  statRes <- SQLite.step stmt
   case statRes of
-    Base.Row -> do
-      rowRes <- Base.columns stmt
+    SQLite.Row -> do
+      rowRes <- SQLite.columns stmt
       let nCols = length rowRes
       row <- convertRow fromRow_ rowRes nCols
       return $ Just row
-    Base.Done -> return Nothing
+    SQLite.Done -> return Nothing
 
-convertRow :: RowParser r -> [Base.SQLData] -> Int -> IO r
+convertRow :: RowParser r -> [SQLData] -> Int -> IO r
 convertRow fromRow_ rowRes ncols = do
   let rw = RowParseRO ncols
   case runStateT (runReaderT (unRP fromRow_) rw) (0, rowRes) of
@@ -448,7 +443,7 @@ convertRow fromRow_ rowRes ncols = do
                ("at least " ++ show c ++ " slots in target type")
                "mismatch between number of columns to convert and number in target type")
 
-    ellipsis :: Base.SQLData -> T.Text
+    ellipsis :: SQLData -> T.Text
     ellipsis sql
       | T.length bs > 20 = T.take 15 bs `T.append` "[...]"
       | otherwise        = bs
@@ -502,21 +497,21 @@ withExclusiveTransaction conn action =
 --
 -- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
 lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = BaseD.lastInsertRowId 
+lastInsertRowId = SQLite.Direct.lastInsertRowId 
 
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
 -- Return the number of rows that were changed, inserted, or deleted
 -- by the most recent @INSERT@, @DELETE@, or @UPDATE@ statement.
 changes :: Connection -> IO Int
-changes = BaseD.changes
+changes = SQLite.Direct.changes
 
 -- | <http://www.sqlite.org/c3ref/total_changes.html>
 --
 -- Return the total number of row changes caused by @INSERT@, @DELETE@,
 -- or @UPDATE@ statements since the 'Database' was opened.
 totalChanges :: Connection -> IO Int
-totalChanges = BaseD.totalChanges
+totalChanges = SQLite.Direct.totalChanges
 
 -- | Run an IO action inside a SQL transaction started with @BEGIN
 -- TRANSACTION@.  If the action throws any kind of an exception, the
@@ -534,12 +529,12 @@ fmtError msg q xs =
     , fmtParams   = map show xs
     }
 
-getQuery :: Base.PreparedStatement -> IO Query
+getQuery :: SQLite.PreparedStatement -> IO Query
 getQuery stmt =
-  toQuery <$> BaseD.statementSql stmt
+  toQuery <$> SQLite.Direct.statementSql stmt
   where
     toQuery =
-      Query . maybe "no query string" (\(BaseD.Utf8 s) -> TE.decodeUtf8 s)
+      Query . maybe "no query string" (\(SQLite.Direct.Utf8 s) -> TE.decodeUtf8 s)
 
 -- $use
 -- An example that creates a table 'test', inserts a couple of rows

@@ -101,7 +101,7 @@ test-suite test-query
                 , Fold
                 , ParamConv
                 , Query
-                , Statement
+                , PreparedStatement
                 , TestImports
                 , UserInstances
                 , Utf8Strings

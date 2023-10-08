@@ -10,7 +10,7 @@ import Errors
 import Fold
 import ParamConv
 import Query
-import Statement
+import PreparedStatement
 import TestImports()
 import TestImports
 import UserInstances
