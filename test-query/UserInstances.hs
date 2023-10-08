@@ -2,7 +2,7 @@
 
 module UserInstances (
    testUserFromField
-  ,testSQLDataFromField
+  ,testSqlDataFromField
   ) where
 
 import           Common
@@ -18,12 +18,12 @@ newtype MyType = MyType String deriving (Eq, Show, Typeable)
 instance FromField MyType where
   fromField f = cvt f . fieldData $ f where
     -- Prefix with "fromField " to really ensure we got here
-    cvt _ (SQLText s) = Ok $ MyType ("fromField "++(T.unpack s))
-    cvt f _           = returnError ConversionFailed f "expecting SQLText type"
+    cvt _ (SqlText s) = Ok $ MyType ("fromField "++(T.unpack s))
+    cvt f _           = returnError ConversionFailed f "expecting SqlText type"
 
 instance ToField MyType where
   -- Prefix with "toField " to really ensure we got here
-  toField (MyType s) = SQLText . T.pack $ ("toField " ++ s)
+  toField (MyType s) = SqlText . T.pack $ ("toField " ++ s)
 
 testUserFromField :: TestEnv -> Test
 testUserFromField TestEnv{..} = TestCase $ do
@@ -36,8 +36,8 @@ testUserFromField TestEnv{..} = TestCase $ do
   [Solo r] <- query_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
   "toField test2" @=? r
 
-testSQLDataFromField :: TestEnv -> Test
-testSQLDataFromField TestEnv{..} = TestCase $ do
+testSqlDataFromField :: TestEnv -> Test
+testSqlDataFromField TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE sqldatafromfield (t TEXT, i INT, b BOOLEAN, f FLOAT)"
   execute conn "INSERT INTO sqldatafromfield (t,i,b,f) VALUES (?,?,?,?)" (("test string" :: T.Text,
                                                                     1 :: Int64,
@@ -46,13 +46,13 @@ testSQLDataFromField TestEnv{..} = TestCase $ do
   execute conn "INSERT INTO sqldatafromfield (t,i,b) VALUES (?,?,?)" (("test string2" :: T.Text,
                                                                     2 :: Int64,
                                                                     False :: Bool))
-  r <- query_ conn "SELECT * FROM sqldatafromfield" :: IO [[SQLData]]
-  let testData = [[SQLText "test string",
-                   SQLInteger 1,
-                   SQLInteger 1,
-                   SQLFloat 1.11],
-                  [SQLText "test string2",
-                   SQLInteger 2,
-                   SQLInteger 0,
-                   SQLNull]]
+  r <- query_ conn "SELECT * FROM sqldatafromfield" :: IO [[SqlData]]
+  let testData = [[SqlText "test string",
+                   SqlInteger 1,
+                   SqlInteger 1,
+                   SqlFloat 1.11],
+                  [SqlText "test string2",
+                   SqlInteger 2,
+                   SqlInteger 0,
+                   SqlNull]]
   testData @=? r

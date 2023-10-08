@@ -197,10 +197,10 @@ instance FromRow TestTuple2 where
   fromRow = TestTuple2 <$> field <*> field
 
 instance ToRow TestTuple where
-  toRow (TestTuple a b) = [SQLInteger a, SQLInteger b]
+  toRow (TestTuple a b) = [SqlInteger a, SqlInteger b]
 
 instance ToRow TestTuple2 where
-  toRow (TestTuple2 a b) = [SQLText a, SQLText b]
+  toRow (TestTuple2 a b) = [SqlText a, SqlText b]
 
 testParamConvComposite :: TestEnv -> Test
 testParamConvComposite TestEnv{..} = TestCase $ do

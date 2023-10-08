@@ -13,7 +13,7 @@
 -- Portability: portable
 --
 -- The 'FromField' typeclass, for converting a single value in a row
--- returned by a SQL query into a more useful Haskell representation.
+-- returned by a Sql query into a more useful Haskell representation.
 --
 -- A Haskell numeric type is considered to be compatible with all
 -- Sqlite numeric types that are less accurate than it. For instance,
@@ -50,21 +50,21 @@ import           Sqlite.Query.Types
 import           Sqlite.Query.Internal
 import           Sqlite.Query.Ok
 
--- | Exception thrown if conversion from a SQL value to a Haskell
+-- | Exception thrown if conversion from a Sql value to a Haskell
 -- value fails.
-data ResultError = Incompatible { errSQLType :: String
+data ResultError = Incompatible { errSqlType :: String
                                 , errHaskellType :: String
                                 , errMessage :: String }
-                 -- ^ The SQL and Haskell types are not compatible.
-                 | UnexpectedNull { errSQLType :: String
+                 -- ^ The Sql and Haskell types are not compatible.
+                 | UnexpectedNull { errSqlType :: String
                                   , errHaskellType :: String
                                   , errMessage :: String }
-                 -- ^ A SQL @NULL@ was encountered when the Haskell
+                 -- ^ A Sql @NULL@ was encountered when the Haskell
                  -- type did not permit it.
-                 | ConversionFailed { errSQLType :: String
+                 | ConversionFailed { errSqlType :: String
                                     , errHaskellType :: String
                                     , errMessage :: String }
-                 -- ^ The SQL value could not be parsed, or could not
+                 -- ^ The Sql value could not be parsed, or could not
                  -- be represented as a valid Haskell value, or an
                  -- unexpected low-level error occurred (e.g. mismatch
                  -- between metadata and actual data in a row).
@@ -77,10 +77,10 @@ left = Errors . (:[]) . SomeException
 
 type FieldParser a = Field -> Ok a
 
--- | A type that may be converted from a SQL type.
+-- | A type that may be converted from a Sql type.
 class FromField a where
     fromField :: FieldParser a
-    -- ^ Convert a SQL value to a Haskell value.
+    -- ^ Convert a Sql value to a Haskell value.
     --
     -- Returns a list of exceptions if the conversion fails.  In the case of
     -- library instances,  this will usually be a single 'ResultError',  but
@@ -96,15 +96,15 @@ class FromField a where
     -- and 'B.takeWhile' alone will also trigger this memory leak.
 
 instance (FromField a) => FromField (Maybe a) where
-    fromField (Field SQLNull _) = pure Nothing
+    fromField (Field SqlNull _) = pure Nothing
     fromField f                 = Just <$> fromField f
 
 instance FromField Null where
-    fromField (Field SQLNull _) = pure Null
+    fromField (Field SqlNull _) = pure Null
     fromField f                 = returnError ConversionFailed f "data is not null"
 
 takeInt :: (Num a, Typeable a) => Field -> Ok a
-takeInt (Field (SQLInteger i) _) = Ok . fromIntegral $ i
+takeInt (Field (SqlInteger i) _) = Ok . fromIntegral $ i
 takeInt f                        = returnError ConversionFailed f "need an int"
 
 instance FromField Int8 where
@@ -141,25 +141,25 @@ instance FromField Word where
     fromField = takeInt
 
 instance FromField Double where
-    fromField (Field (SQLFloat flt) _) = Ok flt
-    fromField f                        = returnError ConversionFailed f "expecting an SQLFloat column type"
+    fromField (Field (SqlFloat flt) _) = Ok flt
+    fromField f                        = returnError ConversionFailed f "expecting an SqlFloat column type"
 
 instance FromField Float where
-    fromField (Field (SQLFloat flt) _) = Ok . double2Float $ flt
-    fromField f                        = returnError ConversionFailed f "expecting an SQLFloat column type"
+    fromField (Field (SqlFloat flt) _) = Ok . double2Float $ flt
+    fromField f                        = returnError ConversionFailed f "expecting an SqlFloat column type"
 
 instance FromField Bool where
-    fromField f@(Field (SQLInteger b) _)
+    fromField f@(Field (SqlInteger b) _)
       | (b == 0) || (b == 1) = Ok (b /= 0)
       | otherwise = returnError ConversionFailed f ("bool must be 0 or 1, got " ++ show b)
 
-    fromField f = returnError ConversionFailed f "expecting an SQLInteger column type"
+    fromField f = returnError ConversionFailed f "expecting an SqlInteger column type"
 
 instance FromField T.Text where
   fromField f@(Field sqlData _) = case sqlData of
-    SQLText v -> Ok v
-    SQLInteger v -> Ok $ T.pack $ show v
-    SQLFloat v -> Ok $ T.pack $ show v
+    SqlText v -> Ok v
+    SqlInteger v -> Ok $ T.pack $ show v
+    SqlFloat v -> Ok $ T.pack $ show v
     _ -> returnError ConversionFailed f "need convertible to text"
 
 instance FromField LT.Text where
@@ -169,23 +169,23 @@ instance FromField [Char] where
   fromField f = T.unpack <$> fromField f
 
 instance FromField ByteString where
-  fromField (Field (SQLBlob blb) _) = Ok blb
-  fromField f                       = returnError ConversionFailed f "expecting SQLBlob column type"
+  fromField (Field (SqlBlob blb) _) = Ok blb
+  fromField f                       = returnError ConversionFailed f "expecting SqlBlob column type"
 
 instance FromField LB.ByteString where
-  fromField (Field (SQLBlob blb) _) = Ok . LB.fromChunks $ [blb]
-  fromField f                       = returnError ConversionFailed f "expecting SQLBlob column type"
+  fromField (Field (SqlBlob blb) _) = Ok . LB.fromChunks $ [blb]
+  fromField f                       = returnError ConversionFailed f "expecting SqlBlob column type"
 
-instance FromField SQLData where
+instance FromField SqlData where
   fromField f = Ok (fieldData f)
 
 fieldTypename :: Field -> String
 fieldTypename = B.unpack . gettypename . result
 
--- | Return the actual SQL data for a database field.  This allows
--- user-defined 'FromField' instances to access the SQL data
+-- | Return the actual Sql data for a database field.  This allows
+-- user-defined 'FromField' instances to access the Sql data
 -- associated with a field being parsed.
-fieldData :: Field -> SQLData
+fieldData :: Field -> SqlData
 fieldData = result
 
 -- | Given one of the constructors from 'ResultError',  the field,

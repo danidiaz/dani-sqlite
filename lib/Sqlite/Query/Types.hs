@@ -30,7 +30,7 @@ import qualified Data.Text as T
 import Data.Tuple (Solo (..))
 import Data.Typeable (Typeable)
 
--- | A placeholder for the SQL @NULL@ value.
+-- | A placeholder for the Sql @NULL@ value.
 data Null = Null
   deriving (Read, Show, Typeable)
 
@@ -39,8 +39,8 @@ instance Eq Null where
   _ /= _ = False
 
 -- | A query string. This type is intended to make it difficult to
--- construct a SQL query by concatenating string fragments, as that is
--- an extremely common way to accidentally introduce SQL injection
+-- construct a Sql query by concatenating string fragments, as that is
+-- an extremely common way to accidentally introduce Sql injection
 -- vulnerabilities into an application.
 --
 -- This type is an instance of 'IsString', so the easiest way to

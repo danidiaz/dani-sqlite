@@ -49,10 +49,10 @@ instance StrictEq a => StrictEq [a] where
     (x:xs)  === (y:ys)  = x === y && xs === ys
     _       === _       = False
 
-instance StrictEq SQLData where
-    SQLInteger  a === SQLInteger b = a === b
-    SQLFloat    a === SQLFloat   b = a === b
-    SQLText     a === SQLText    b = a === b
-    SQLBlob     a === SQLBlob    b = a === b
-    SQLNull       === SQLNull      = True
+instance StrictEq SqlData where
+    SqlInteger  a === SqlInteger b = a === b
+    SqlFloat    a === SqlFloat   b = a === b
+    SqlText     a === SqlText    b = a === b
+    SqlBlob     a === SqlBlob    b = a === b
+    SqlNull       === SqlNull      = True
     _             === _            = False

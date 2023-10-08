@@ -53,7 +53,7 @@ module Sqlite.Query (
   , FromRow(..)
   , Solo(..)
   , (:.)(..)
-  , SQLData(..)
+  , SqlData(..)
   , PreparedStatement
   , ColumnIndex (..)
   , NamedParam(..)
@@ -107,7 +107,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
 import           Sqlite.Query.Types
-import Sqlite (PreparedStatement, ColumnIndex, SQLData)
+import Sqlite (PreparedStatement, ColumnIndex, SqlData)
 import Sqlite qualified
 import Sqlite.Direct (Connection)
 import Sqlite.Direct qualified 
@@ -160,7 +160,7 @@ bind stmt params = do
   where
     throwColumnMismatch qp nParams = do
       templ <- getQuery stmt
-      fmtError ("SQL query contains " ++ show nParams ++ " params, but " ++
+      fmtError ("Sql query contains " ++ show nParams ++ " params, but " ++
                 show (length qp) ++ " arguments given") templ qp
     errorCheckParamName qp paramNdx = do
       templ <- getQuery stmt
@@ -183,7 +183,7 @@ bindNamed stmt params = do
               idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
               case idx of
                 Just i ->
-                  Sqlite.bindSQLData stmt i (toField v)
+                  Sqlite.bindSqlData stmt i (toField v)
                 Nothing -> do
                   templ <- getQuery stmt
                   fmtError ("Unknown named parameter '" ++ T.unpack n ++ "'")
@@ -192,7 +192,7 @@ bindNamed stmt params = do
 
     throwColumnMismatch nParams = do
       templ <- getQuery stmt
-      fmtError ("SQL query contains " ++ show nParams ++ " params, but " ++
+      fmtError ("Sql query contains " ++ show nParams ++ " params, but " ++
                 show (length params) ++ " arguments given") templ params
 
 -- | Resets a statement. This does not reset bound parameters, if any, but
@@ -269,7 +269,7 @@ withStatementNamedParams :: Connection
 withStatementNamedParams conn template namedParams action =
   withStatement conn template $ \stmt -> bindNamed stmt namedParams >> action stmt
 
--- | Execute an @INSERT@, @UPDATE@, or other SQL query that is not
+-- | Execute an @INSERT@, @UPDATE@, or other Sql query that is not
 -- expected to return results.
 --
 -- Throws 'FormatError' if the query could not be formatted correctly.
@@ -278,7 +278,7 @@ execute conn template qs =
   withStatementParams conn template qs $ \stmt ->
     void . Sqlite.step $ stmt
 
--- | Execute a multi-row @INSERT@, @UPDATE@, or other SQL query that is not
+-- | Execute a multi-row @INSERT@, @UPDATE@, or other Sql query that is not
 -- expected to return results.
 --
 -- Throws 'FormatError' if the query could not be formatted correctly.
@@ -293,7 +293,7 @@ doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
   fmap reverse $ doFold fromRow_ stmt [] (\acc e -> return (e : acc))
 
--- | Perform a @SELECT@ or other SQL query that is expected to return
+-- | Perform a @SELECT@ or other Sql query that is expected to return
 -- results. All results are retrieved and converted before this
 -- function returns.
 --
@@ -349,7 +349,7 @@ executeNamed conn template params =
   withStatementNamedParams conn template params $ \stmt ->
     void $ Sqlite.step stmt
 
--- | Perform a @SELECT@ or other SQL query that is expected to return results.
+-- | Perform a @SELECT@ or other Sql query that is expected to return results.
 -- Results are converted and fed into the 'action' callback as they are being
 -- retrieved from the database.
 --
@@ -423,7 +423,7 @@ nextRowWith fromRow_  stmt = do
       return $ Just row
     Sqlite.Done -> return Nothing
 
-convertRow :: RowParser r -> [SQLData] -> Int -> IO r
+convertRow :: RowParser r -> [SqlData] -> Int -> IO r
 convertRow fromRow_ rowRes ncols = do
   let rw = RowParseRO ncols
   case runStateT (runReaderT (unRP fromRow_) rw) (0, rowRes) of
@@ -443,7 +443,7 @@ convertRow fromRow_ rowRes ncols = do
                ("at least " ++ show c ++ " slots in target type")
                "mismatch between number of columns to convert and number in target type")
 
-    ellipsis :: SQLData -> T.Text
+    ellipsis :: SqlData -> T.Text
     ellipsis sql
       | T.length bs > 20 = T.take 15 bs `T.append` "[...]"
       | otherwise        = bs
@@ -471,7 +471,7 @@ withTransactionPrivate conn action ttype =
                  _ -> "ROLLBACK TRANSACTION"
 
 
--- | Run an IO action inside a SQL transaction started with @BEGIN IMMEDIATE
+-- | Run an IO action inside a Sql transaction started with @BEGIN IMMEDIATE
 -- TRANSACTION@, which immediately blocks all other database connections from
 -- writing.  The default Sqlite3 @BEGIN TRANSACTION@ does not acquire the write
 -- lock on @BEGIN@ nor on @SELECT@ but waits until you try to change data.  If
@@ -482,7 +482,7 @@ withImmediateTransaction :: Connection -> IO a -> IO a
 withImmediateTransaction conn action =
   withTransactionPrivate conn action Immediate
 
--- | Run an IO action inside a SQL transaction started with @BEGIN EXCLUSIVE
+-- | Run an IO action inside a Sql transaction started with @BEGIN EXCLUSIVE
 -- TRANSACTION@, which immediately blocks all other database connections from
 -- writing, and other connections from reading (exception: read_uncommitted
 -- connections are allowed to read.) If the action throws any kind of an
@@ -513,7 +513,7 @@ changes = Sqlite.Direct.changes
 totalChanges :: Connection -> IO Int
 totalChanges = Sqlite.Direct.totalChanges
 
--- | Run an IO action inside a SQL transaction started with @BEGIN
+-- | Run an IO action inside a Sql transaction started with @BEGIN
 -- TRANSACTION@.  If the action throws any kind of an exception, the
 -- transaction will be rolled back with @ROLLBACK TRANSACTION@.
 -- Otherwise the results are committed with @COMMIT TRANSACTION@.
@@ -573,11 +573,11 @@ getQuery stmt =
 
 -- $querytype
 --
--- SQL-based applications are somewhat notorious for their
+-- Sql-based applications are somewhat notorious for their
 -- susceptibility to attacks through the injection of maliciously
 -- crafted data. The primary reason for widespread vulnerability to
--- SQL injections is that many applications are sloppy in handling
--- user data when constructing SQL queries.
+-- Sql injections is that many applications are sloppy in handling
+-- user data when constructing Sql queries.
 --
 -- This library provides a 'Query' type and a parameter substitution
 -- facility to address both ease of use and security.  A 'Query' is a
@@ -647,7 +647,7 @@ getQuery stmt =
 --
 -- Note that the substitution functions do not attempt to parse or
 -- validate your query. It's up to you to write syntactically valid
--- SQL, and to ensure that each \"@?@\" in your query template is
+-- Sql, and to ensure that each \"@?@\" in your query template is
 -- matched with the right tuple element.
 
 -- $substnamed
@@ -673,8 +673,8 @@ getQuery stmt =
 -- @
 --
 -- The parameter name (or key) in the 'NamedParam' must match exactly
--- the name written in the SQL query.  E.g., if you used @:foo@ in
--- your SQL statement, you need to use @\":foo\"@ as the parameter
+-- the name written in the Sql query.  E.g., if you used @:foo@ in
+-- your Sql statement, you need to use @\":foo\"@ as the parameter
 -- key, not @\"foo\"@.  Some libraries like Python's sqlite3
 -- automatically drop the @:@ character from the name.
 
@@ -745,7 +745,7 @@ getQuery stmt =
 --
 -- > (Text, Int, Int)
 --
--- Although SQL can accommodate @NULL@ as a value for any of these
+-- Although Sql can accommodate @NULL@ as a value for any of these
 -- types, Haskell cannot. If your result contains columns that may be
 -- @NULL@, be sure that you use 'Maybe' in those positions of of your
 -- tuple.
@@ -766,7 +766,7 @@ getQuery stmt =
 
 -- $types
 --
--- Conversion of SQL values to Haskell values is somewhat
+-- Conversion of Sql values to Haskell values is somewhat
 -- permissive. Here are the rules.
 --
 -- * For numeric types, any Haskell type that can accurately represent

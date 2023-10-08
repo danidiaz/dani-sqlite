@@ -55,7 +55,7 @@ instance Exception ColumnOutOfBounds
 
 -- | A Field represents metadata about a particular field
 data Field = Field
-  { result :: Base.SQLData,
+  { result :: Base.SqlData,
     column :: {-# UNPACK #-} !Int
   }
 
@@ -63,12 +63,12 @@ data Field = Field
 -- it easier to make sense out of types in FromRow.
 newtype RowParseRO = RowParseRO {nColumns :: Int}
 
-newtype RowParser a = RP {unRP :: ReaderT RowParseRO (StateT (Int, [Base.SQLData]) Ok) a}
+newtype RowParser a = RP {unRP :: ReaderT RowParseRO (StateT (Int, [Base.SqlData]) Ok) a}
   deriving (Functor, Applicative, Alternative, Monad, MonadPlus)
 
-gettypename :: Base.SQLData -> ByteString
-gettypename (Base.SQLInteger _) = "INTEGER"
-gettypename (Base.SQLFloat _) = "FLOAT"
-gettypename (Base.SQLText _) = "TEXT"
-gettypename (Base.SQLBlob _) = "BLOB"
-gettypename Base.SQLNull = "NULL"
+gettypename :: Base.SqlData -> ByteString
+gettypename (Base.SqlInteger _) = "INTEGER"
+gettypename (Base.SqlFloat _) = "FLOAT"
+gettypename (Base.SqlText _) = "TEXT"
+gettypename (Base.SqlBlob _) = "BLOB"
+gettypename Base.SqlNull = "NULL"

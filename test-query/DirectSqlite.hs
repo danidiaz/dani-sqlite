@@ -21,4 +21,4 @@ testDirectSqlite TestEnv{..} = TestCase $ do
     testDirect stmt = do
       DS.Row <- DS.step stmt
       res <- DS.column stmt 0
-      assertEqual "1+1" (SQLInteger 2) res
+      assertEqual "1+1" (SqlInteger 2) res

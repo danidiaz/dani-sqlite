@@ -11,7 +11,7 @@
 -- Portability: portable
 --
 -- The 'FromRow' typeclass, for converting a row of results
--- returned by a SQL query into a more useful Haskell representation.
+-- returned by a Sql query into a more useful Haskell representation.
 --
 -- Predefined instances are provided for tuples containing up to ten
 -- elements.

@@ -11,7 +11,7 @@
 -- Portability: portable
 --
 -- The 'ToRow' typeclass, for rendering a collection of
--- parameters to a SQL query.
+-- parameters to a Sql query.
 --
 -- Predefined instances are provided for tuples containing up to ten
 -- elements.
@@ -28,14 +28,14 @@ import GHC.Generics
 import Sqlite.Query.ToField (ToField(..))
 import Sqlite.Query.Types (Solo(..), (:.)(..))
 
-import Sqlite (SQLData(..))
+import Sqlite (SqlData(..))
 
 -- | Generic derivation of 'ToRow'.  For details about what can be
 -- derived refer to 'Database.Sqlite.Simple.FromRow.GFromRow'.
 --
 -- @since 0.4.18.1
 class GToRow f where
-  gtoRow :: (f a) -> [SQLData]
+  gtoRow :: (f a) -> [SqlData]
 
 instance GToRow U1 where
   gtoRow U1 = mempty
@@ -49,7 +49,7 @@ instance (GToRow a, GToRow b) => GToRow (a :*: b) where
 instance GToRow a => GToRow (M1 i c a) where
   gtoRow (M1 a) = gtoRow a
 
--- | A collection type that can be turned into a list of 'SQLData'
+-- | A collection type that can be turned into a list of 'SqlData'
 -- elements.
 --
 -- Since version 0.4.18.1 it is possible in some cases to derive a
@@ -57,10 +57,10 @@ instance GToRow a => GToRow (M1 i c a) where
 -- 'Database.Sqlite.Simple.FromRow.FromRow' to see how this can be
 -- done.
 class ToRow a where
-    toRow :: a -> [SQLData]
+    toRow :: a -> [SqlData]
     -- ^ 'ToField' a collection of values.
 
-    default toRow :: Generic a => GToRow (Rep a) => a -> [SQLData]
+    default toRow :: Generic a => GToRow (Rep a) => a -> [SqlData]
     toRow a = gtoRow $ from a
 
 deriving instance ToRow ()
