@@ -8,7 +8,7 @@ module StrictEq (
 import Data.ByteString          (ByteString)
 import Data.Int                 (Int64)
 import Data.Text                (Text)
-import SQLite
+import Sqlite
 import Foreign.C
 import Foreign.Marshal.Alloc
 import Foreign.Ptr
