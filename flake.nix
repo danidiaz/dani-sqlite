@@ -16,7 +16,7 @@
       devShells.x86_64-linux.default = pkgs.mkShell {
         buildInputs = [
           pkgs.cabal-install 
-          (pkgs.ghcWithPackages (hpkgs : [hpkgs.tasty hpkgs.tasty-hunit])) 
+          (pkgs.haskellPackages.ghcWithPackages (hpkgs : [hpkgs.tasty hpkgs.tasty-hunit])) 
           pkgs.haskell-language-server
           pkgs.ormolu
           pkgs.sqlite
