@@ -62,6 +62,6 @@ testPreparedStatementsColumnCount TestEnv{..} = TestCase $ do
     colName @?= "t"
     ColumnIndex colCount <- columnCount stmt
     colCount @?= 1
-    let baseStatment = unStatement stmt
+    let baseStatment = unPreparedStatement stmt
     colCountBase <- Base.columnCount baseStatment
     colCountBase @?= 1

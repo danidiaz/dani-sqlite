@@ -85,7 +85,7 @@ shouldFail action = do
     Left e -> return $ isUserError e
     Right _ -> return False
 
-withStmt :: Connection -> Text -> (Statement -> IO a) -> IO a
+withStmt :: Connection -> Text -> (PreparedStatement -> IO a) -> IO a
 withStmt conn sql = bracket (prepare conn sql) finalize
 
 testExec :: IO TestEnv -> Assertion

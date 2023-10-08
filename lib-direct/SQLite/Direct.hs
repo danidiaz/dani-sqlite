@@ -125,7 +125,7 @@ module SQLite.Direct
 
     -- * Types
     Connection (..),
-    Statement (..),
+    PreparedStatement (..),
     ColumnType (..),
     FuncContext (..),
     FuncArgs (..),
@@ -166,7 +166,7 @@ import System.IO.Unsafe qualified as IOU
 newtype Connection = Connection (Ptr CConnection)
   deriving (Eq, Show)
 
-newtype Statement = Statement (Ptr CStatement)
+newtype PreparedStatement = PreparedStatement (Ptr CStatement)
   deriving (Eq, Show)
 
 data StepResult
@@ -480,32 +480,32 @@ setSharedCacheEnabled val =
 --
 -- If the query contains no SQL statements, this returns
 -- @'Right' 'Nothing'@.
-prepare :: Connection -> Utf8 -> IO (Either Error (Maybe Statement))
+prepare :: Connection -> Utf8 -> IO (Either Error (Maybe PreparedStatement))
 prepare (Connection db) (Utf8 sql) =
   BS.useAsCString sql $ \sql' ->
     alloca $ \statement ->
       c_sqlite3_prepare_v2 db sql' (-1) statement nullPtr
-        >>= toResultM (wrapNullablePtr Statement <$> peek statement)
+        >>= toResultM (wrapNullablePtr PreparedStatement <$> peek statement)
 
 -- | <https://www.sqlite.org/c3ref/db_handle.html>
-getStatementConnection :: Statement -> IO Connection
-getStatementConnection (Statement stmt) = do
+getStatementConnection :: PreparedStatement -> IO Connection
+getStatementConnection (PreparedStatement stmt) = do
   db <- c_sqlite3_db_handle stmt
   if db == nullPtr
     then fail $ "sqlite3_db_handle(" ++ show stmt ++ ") returned NULL"
     else return (Connection db)
 
 -- | <https://www.sqlite.org/c3ref/step.html>
-step :: Statement -> IO (Either Error StepResult)
-step (Statement stmt) =
+step :: PreparedStatement -> IO (Either Error StepResult)
+step (PreparedStatement stmt) =
   toStepResult <$> c_sqlite3_step stmt
 
 -- | <https://www.sqlite.org/c3ref/step.html>
 --
 -- Faster step for statements that don't callback to Haskell
 -- functions (e.g. by using custom SQL functions).
-stepNoCB :: Statement -> IO (Either Error StepResult)
-stepNoCB (Statement stmt) =
+stepNoCB :: PreparedStatement -> IO (Either Error StepResult)
+stepNoCB (PreparedStatement stmt) =
   toStepResult <$> c_sqlite3_step_unsafe stmt
 
 -- | <https://www.sqlite.org/c3ref/reset.html>
@@ -517,30 +517,30 @@ stepNoCB (Statement stmt) =
 --
 --  * This does not reset the bindings on a prepared statement.
 --    Use 'clearBindings' to do that.
-reset :: Statement -> IO (Either Error ())
-reset (Statement stmt) =
+reset :: PreparedStatement -> IO (Either Error ())
+reset (PreparedStatement stmt) =
   toResult () <$> c_sqlite3_reset stmt
 
 -- | <https://www.sqlite.org/c3ref/finalize.html>
 --
 -- /Warning:/ If the most recent 'step' call failed,
 -- this will return the corresponding error.
-finalize :: Statement -> IO (Either Error ())
-finalize (Statement stmt) =
+finalize :: PreparedStatement -> IO (Either Error ())
+finalize (PreparedStatement stmt) =
   toResult () <$> c_sqlite3_finalize stmt
 
 -- | <https://www.sqlite.org/c3ref/sql.html>
 --
 -- Return a copy of the original SQL text used to compile the statement.
-statementSql :: Statement -> IO (Maybe Utf8)
-statementSql (Statement stmt) =
+statementSql :: PreparedStatement -> IO (Maybe Utf8)
+statementSql (PreparedStatement stmt) =
   c_sqlite3_sql stmt >>= packUtf8 Nothing Just
 
 -- | <https://www.sqlite.org/c3ref/clear_bindings.html>
 --
 -- Set all parameters in the prepared statement to null.
-clearBindings :: Statement -> IO ()
-clearBindings (Statement stmt) = do
+clearBindings :: PreparedStatement -> IO ()
+clearBindings (PreparedStatement stmt) = do
   _ <- c_sqlite3_clear_bindings stmt
   return ()
 
@@ -551,83 +551,83 @@ clearBindings (Statement stmt) = do
 -- @?5@ are used, there may be gaps in the list.
 --
 -- See 'ParamIndex' for more information.
-bindParameterCount :: Statement -> IO ParamIndex
-bindParameterCount (Statement stmt) =
+bindParameterCount :: PreparedStatement -> IO ParamIndex
+bindParameterCount (PreparedStatement stmt) =
   fromFFI <$> c_sqlite3_bind_parameter_count stmt
 
 -- | <https://www.sqlite.org/c3ref/bind_parameter_name.html>
-bindParameterName :: Statement -> ParamIndex -> IO (Maybe Utf8)
-bindParameterName (Statement stmt) idx =
+bindParameterName :: PreparedStatement -> ParamIndex -> IO (Maybe Utf8)
+bindParameterName (PreparedStatement stmt) idx =
   c_sqlite3_bind_parameter_name stmt (toFFI idx)
     >>= packUtf8 Nothing Just
 
 -- | <https://www.sqlite.org/c3ref/bind_parameter_index.html>
-bindParameterIndex :: Statement -> Utf8 -> IO (Maybe ParamIndex)
-bindParameterIndex (Statement stmt) (Utf8 name) =
+bindParameterIndex :: PreparedStatement -> Utf8 -> IO (Maybe ParamIndex)
+bindParameterIndex (PreparedStatement stmt) (Utf8 name) =
   BS.useAsCString name $ \name' -> do
     idx <- fromFFI <$> c_sqlite3_bind_parameter_index stmt name'
     return $ if idx == 0 then Nothing else Just idx
 
 -- | <https://www.sqlite.org/c3ref/column_count.html>
-columnCount :: Statement -> IO ColumnCount
-columnCount (Statement stmt) =
+columnCount :: PreparedStatement -> IO ColumnCount
+columnCount (PreparedStatement stmt) =
   fromFFI <$> c_sqlite3_column_count stmt
 
 -- | <https://www.sqlite.org/c3ref/column_name.html>
-columnName :: Statement -> ColumnIndex -> IO (Maybe Utf8)
-columnName (Statement stmt) idx =
+columnName :: PreparedStatement -> ColumnIndex -> IO (Maybe Utf8)
+columnName (PreparedStatement stmt) idx =
   c_sqlite3_column_name stmt (toFFI idx)
     >>= packUtf8 Nothing Just
 
-bindInt64 :: Statement -> ParamIndex -> Int64 -> IO (Either Error ())
-bindInt64 (Statement stmt) idx value =
+bindInt64 :: PreparedStatement -> ParamIndex -> Int64 -> IO (Either Error ())
+bindInt64 (PreparedStatement stmt) idx value =
   toResult () <$> c_sqlite3_bind_int64 stmt (toFFI idx) value
 
-bindDouble :: Statement -> ParamIndex -> Double -> IO (Either Error ())
-bindDouble (Statement stmt) idx value =
+bindDouble :: PreparedStatement -> ParamIndex -> Double -> IO (Either Error ())
+bindDouble (PreparedStatement stmt) idx value =
   toResult () <$> c_sqlite3_bind_double stmt (toFFI idx) value
 
-bindText :: Statement -> ParamIndex -> Utf8 -> IO (Either Error ())
-bindText (Statement stmt) idx (Utf8 value) =
+bindText :: PreparedStatement -> ParamIndex -> Utf8 -> IO (Either Error ())
+bindText (PreparedStatement stmt) idx (Utf8 value) =
   unsafeUseAsCStringLenNoNull value $ \ptr len ->
     toResult ()
       <$> c_sqlite3_bind_text stmt (toFFI idx) ptr len c_SQLITE_TRANSIENT
 
-bindBlob :: Statement -> ParamIndex -> ByteString -> IO (Either Error ())
-bindBlob (Statement stmt) idx value =
+bindBlob :: PreparedStatement -> ParamIndex -> ByteString -> IO (Either Error ())
+bindBlob (PreparedStatement stmt) idx value =
   unsafeUseAsCStringLenNoNull value $ \ptr len ->
     toResult ()
       <$> c_sqlite3_bind_blob stmt (toFFI idx) ptr len c_SQLITE_TRANSIENT
 
-bindZeroBlob :: Statement -> ParamIndex -> Int -> IO (Either Error ())
-bindZeroBlob (Statement stmt) idx len =
+bindZeroBlob :: PreparedStatement -> ParamIndex -> Int -> IO (Either Error ())
+bindZeroBlob (PreparedStatement stmt) idx len =
   toResult ()
     <$> c_sqlite3_bind_zeroblob stmt (toFFI idx) (fromIntegral len)
 
-bindNull :: Statement -> ParamIndex -> IO (Either Error ())
-bindNull (Statement stmt) idx =
+bindNull :: PreparedStatement -> ParamIndex -> IO (Either Error ())
+bindNull (PreparedStatement stmt) idx =
   toResult () <$> c_sqlite3_bind_null stmt (toFFI idx)
 
-columnType :: Statement -> ColumnIndex -> IO ColumnType
-columnType (Statement stmt) idx =
+columnType :: PreparedStatement -> ColumnIndex -> IO ColumnType
+columnType (PreparedStatement stmt) idx =
   decodeColumnType <$> c_sqlite3_column_type stmt (toFFI idx)
 
-columnInt64 :: Statement -> ColumnIndex -> IO Int64
-columnInt64 (Statement stmt) idx =
+columnInt64 :: PreparedStatement -> ColumnIndex -> IO Int64
+columnInt64 (PreparedStatement stmt) idx =
   c_sqlite3_column_int64 stmt (toFFI idx)
 
-columnDouble :: Statement -> ColumnIndex -> IO Double
-columnDouble (Statement stmt) idx =
+columnDouble :: PreparedStatement -> ColumnIndex -> IO Double
+columnDouble (PreparedStatement stmt) idx =
   c_sqlite3_column_double stmt (toFFI idx)
 
-columnText :: Statement -> ColumnIndex -> IO Utf8
-columnText (Statement stmt) idx = do
+columnText :: PreparedStatement -> ColumnIndex -> IO Utf8
+columnText (PreparedStatement stmt) idx = do
   ptr <- c_sqlite3_column_text stmt (toFFI idx)
   len <- c_sqlite3_column_bytes stmt (toFFI idx)
   Utf8 <$> packCStringLen ptr len
 
-columnBlob :: Statement -> ColumnIndex -> IO ByteString
-columnBlob (Statement stmt) idx = do
+columnBlob :: PreparedStatement -> ColumnIndex -> IO ByteString
+columnBlob (PreparedStatement stmt) idx = do
   ptr <- c_sqlite3_column_blob stmt (toFFI idx)
   len <- c_sqlite3_column_bytes stmt (toFFI idx)
   packCStringLen ptr len
