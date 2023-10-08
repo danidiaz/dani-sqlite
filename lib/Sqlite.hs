@@ -256,7 +256,7 @@ instance Exception SqliteException
 -- | Like 'decodeUtf8', but substitute a custom error message if
 -- decoding fails.
 fromUtf8 :: String -> Utf8 -> IO Text
-fromUtf8 desc utf8 = evaluate $ fromUtf8' desc utf8
+fromUtf8 desc utf8 = evaluate do fromUtf8' desc utf8
 
 fromUtf8' :: String -> Utf8 -> Text
 fromUtf8' desc (Utf8 bs) =
@@ -306,9 +306,9 @@ open ::
   -- | Connection filename.
   Text ->
   IO Connection
-open path =
-  Direct.open (toUtf8 path)
-    >>= checkErrorMsg ("open " `appendShow` path)
+open path = do
+  result <- Direct.open (toUtf8 path)
+  checkErrorMsg ("open " `appendShow` path) result
 
 -- | <https://www.sqlite.org/c3ref/open.html>
 openV2 ::
@@ -333,8 +333,9 @@ data VFS
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Connection -> IO ()
-close db =
-  Direct.close db >>= checkError (DetailConnection db) "close"
+close db = do
+  result <- Direct.close db 
+  checkError (DetailConnection db) "close" result
 
 -- | Make it possible to interrupt the given database operation with an
 -- asynchronous exception.  This only works if the program is compiled with
@@ -345,15 +346,15 @@ close db =
 interruptibly :: Connection -> IO a -> IO a
 interruptibly db io
   | rtsSupportsBoundThreads =
-      mask $ \restore -> do
+      mask \restore -> do
         mv <- newEmptyMVar
-        tid <- forkIO $ try' (restore io) >>= putMVar mv
+        tid <- forkIO do try' (restore io) >>= putMVar mv
 
         let interruptAndWait =
               -- Don't let a second exception interrupt us.  Otherwise,
               -- the operation will dangle in the background, which could
               -- be really bad if it uses locally-allocated resources.
-              uninterruptibleMask_ $ do
+              uninterruptibleMask_ do
                 -- Tell Sqlite3 to interrupt the current query.
                 interrupt db
 
@@ -378,9 +379,9 @@ interruptibly db io
 
 -- | Execute zero or more Sql statements delimited by semicolons.
 exec :: Connection -> Text -> IO ()
-exec db sql =
-  Direct.exec db (toUtf8 sql)
-    >>= checkErrorMsg ("exec " `appendShow` sql)
+exec db sql = do
+  result <- Direct.exec db (toUtf8 sql)
+  checkErrorMsg ("exec " `appendShow` sql) result
 
 -- | Like 'exec', but print result rows to 'System.IO.stdout'.
 --
@@ -388,8 +389,8 @@ exec db sql =
 -- The output format may change in the future.
 execPrint :: Connection -> Text -> IO ()
 execPrint !db !sql =
-  interruptibly db $
-    execWithCallback db sql $
+  interruptibly db do
+    execWithCallback db sql do
       \_count _colnames -> T.putStrLn . showValues
   where
     -- This mimics sqlite3's default output mode.  It displays a NULL and an
@@ -398,9 +399,9 @@ execPrint !db !sql =
 
 -- | Like 'exec', but invoke the callback for each result row.
 execWithCallback :: Connection -> Text -> ExecCallback -> IO ()
-execWithCallback db sql cb =
-  Direct.execWithCallback db (toUtf8 sql) cb'
-    >>= checkErrorMsg ("execWithCallback " `appendShow` sql)
+execWithCallback db sql cb = do
+  result <- Direct.execWithCallback db (toUtf8 sql) cb'
+  checkErrorMsg ("execWithCallback " `appendShow` sql) result
   where
     -- We want 'names' computed once and shared with every call.
     cb' count namesUtf8 =
@@ -439,25 +440,26 @@ prepare db sql = prepareUtf8 db (toUtf8 sql)
 -- If the query string contains no Sql statements, this 'fail's.
 prepareUtf8 :: Connection -> Utf8 -> IO PreparedStatement
 prepareUtf8 db sql = do
-  m <-
-    Direct.prepare db sql
-      >>= checkError (DetailConnection db) ("prepare " `appendShow` sql)
+  result <- Direct.prepare db sql
+  m <- checkError (DetailConnection db) ("prepare " `appendShow` sql) result
   case m of
     Nothing -> fail "Direct.Sqlite3.prepare: empty query string"
     Just stmt -> return stmt
 
 -- | <https://www.sqlite.org/c3ref/step.html>
 step :: PreparedStatement -> IO StepResult
-step statement =
-  Direct.step statement >>= checkError (DetailStatement statement) "step"
+step statement = do
+  result <- Direct.step statement 
+  checkError (DetailStatement statement) "step" result
 
 -- | <https://www.sqlite.org/c3ref/step.html>
 --
 -- Faster step for statements that don't callback to Haskell
 -- functions (e.g. by using custom Sql functions).
 stepNoCB :: PreparedStatement -> IO StepResult
-stepNoCB statement =
-  Direct.stepNoCB statement >>= checkError (DetailStatement statement) "stepNoCB"
+stepNoCB statement = do
+  result <- Direct.stepNoCB statement 
+  checkError (DetailStatement statement) "stepNoCB" result
 
 -- Note: sqlite3_reset and sqlite3_finalize return an error code if the most
 -- recent sqlite3_step indicated an error.  I think these are the only times
@@ -541,42 +543,39 @@ columnName stmt idx = do
         }
 
 bindBlob :: PreparedStatement -> ParamIndex -> ByteString -> IO ()
-bindBlob statement parameterIndex byteString =
-  Direct.bindBlob statement parameterIndex byteString
-    >>= checkError (DetailStatement statement) "bind blob"
+bindBlob statement parameterIndex byteString = do
+  result <- Direct.bindBlob statement parameterIndex byteString
+  checkError (DetailStatement statement) "bind blob" result
 
 bindZeroBlob :: PreparedStatement -> ParamIndex -> Int -> IO ()
-bindZeroBlob statement parameterIndex len =
-  Direct.bindZeroBlob statement parameterIndex len
-    >>= checkError (DetailStatement statement) "bind zeroblob"
+bindZeroBlob statement parameterIndex len = do
+  result <- Direct.bindZeroBlob statement parameterIndex len
+  checkError (DetailStatement statement) "bind zeroblob" result
 
 bindDouble :: PreparedStatement -> ParamIndex -> Double -> IO ()
-bindDouble statement parameterIndex datum =
-  Direct.bindDouble statement parameterIndex datum
-    >>= checkError (DetailStatement statement) "bind double"
+bindDouble statement parameterIndex datum = do
+  result <- Direct.bindDouble statement parameterIndex datum
+  checkError (DetailStatement statement) "bind double" result
 
 bindInt :: PreparedStatement -> ParamIndex -> Int -> IO ()
-bindInt statement parameterIndex datum =
-  Direct.bindInt64
-    statement
-    parameterIndex
-    (fromIntegral datum)
-    >>= checkError (DetailStatement statement) "bind int"
+bindInt statement parameterIndex datum = do
+  result <- Direct.bindInt64 statement parameterIndex (fromIntegral datum)
+  checkError (DetailStatement statement) "bind int" result
 
 bindInt64 :: PreparedStatement -> ParamIndex -> Int64 -> IO ()
-bindInt64 statement parameterIndex datum =
-  Direct.bindInt64 statement parameterIndex datum
-    >>= checkError (DetailStatement statement) "bind int64"
+bindInt64 statement parameterIndex datum = do
+  result <- Direct.bindInt64 statement parameterIndex datum
+  checkError (DetailStatement statement) "bind int64" result
 
 bindNull :: PreparedStatement -> ParamIndex -> IO ()
-bindNull statement parameterIndex =
-  Direct.bindNull statement parameterIndex
-    >>= checkError (DetailStatement statement) "bind null"
+bindNull statement parameterIndex = do
+  result <- Direct.bindNull statement parameterIndex
+  checkError (DetailStatement statement) "bind null" result
 
 bindText :: PreparedStatement -> ParamIndex -> Text -> IO ()
-bindText statement parameterIndex text =
-  Direct.bindText statement parameterIndex (toUtf8 text)
-    >>= checkError (DetailStatement statement) "bind text"
+bindText statement parameterIndex text = do
+  result <- Direct.bindText statement parameterIndex (toUtf8 text)
+  checkError (DetailStatement statement) "bind text" result
 
 -- | If the index is not between 1 and 'bindParameterCount' inclusive, this
 -- fails with 'ErrorRange'.  Otherwise, it succeeds, even if the query skips
@@ -605,7 +604,7 @@ bindSqlData statement idx datum =
 bind :: PreparedStatement -> [SqlData] -> IO ()
 bind statement sqlData = do
   ParamIndex nParams <- bindParameterCount statement
-  when (nParams /= length sqlData) $
+  when (nParams /= length sqlData) do
     fail
       ( "mismatched parameter count for bind.  Prepared statement "
           ++ "needs "
@@ -629,7 +628,7 @@ bind statement sqlData = do
 bindNamed :: PreparedStatement -> [(T.Text, SqlData)] -> IO ()
 bindNamed statement params = do
   ParamIndex nParams <- bindParameterCount statement
-  when (nParams /= length params) $
+  when (nParams /= length params) do
     fail
       ( "mismatched parameter count for bind.  Prepared statement "
           ++ "needs "
@@ -641,7 +640,7 @@ bindNamed statement params = do
   mapM_ bindIdx params
   where
     bindIdx (name, val) = do
-      idx <- Direct.bindParameterIndex statement $ toUtf8 name
+      idx <- Direct.bindParameterIndex statement do toUtf8 name
       case idx of
         Just i ->
           bindSqlData statement i val
@@ -652,9 +651,9 @@ bindNamed statement params = do
 -- If this behavior is undesirable, you can use 'Direct.columnText' from
 -- "Database.Sqlite3.Direct", which does not perform conversion to 'Text'.
 columnText :: PreparedStatement -> ColumnIndex -> IO Text
-columnText statement columnIndex =
-  Direct.columnText statement columnIndex
-    >>= fromUtf8 "Database.Sqlite3.columnText: Invalid UTF-8"
+columnText statement columnIndex = do
+  result <- Direct.columnText statement columnIndex
+  fromUtf8 "Database.Sqlite3.columnText: Invalid UTF-8" result
 
 column :: PreparedStatement -> ColumnIndex -> IO SqlData
 column statement idx = do
@@ -703,9 +702,9 @@ createFunction ::
   -- | Implementation of the function.
   (FuncContext -> FuncArgs -> IO ()) ->
   IO ()
-createFunction db name nArgs isDet fun =
-  Direct.createFunction db (toUtf8 name) nArgs isDet fun
-    >>= checkError (DetailConnection db) ("createFunction " `appendShow` name)
+createFunction db name nArgs isDet fun = do
+  result <- Direct.createFunction db (toUtf8 name) nArgs isDet fun
+  checkError (DetailConnection db) ("createFunction " `appendShow` name) result
 
 -- | Like 'createFunction' except that it creates an aggregate function.
 createAggregate ::
@@ -723,20 +722,20 @@ createAggregate ::
   --   from the aggregate state.
   (FuncContext -> a -> IO ()) ->
   IO ()
-createAggregate db name nArgs initSt xStep xFinal =
-  Direct.createAggregate db (toUtf8 name) nArgs initSt xStep xFinal
-    >>= checkError (DetailConnection db) ("createAggregate " `appendShow` name)
+createAggregate db name nArgs initSt xStep xFinal = do
+  result <- Direct.createAggregate db (toUtf8 name) nArgs initSt xStep xFinal
+  checkError (DetailConnection db) ("createAggregate " `appendShow` name) result
 
 -- | Delete an Sql function (scalar or aggregate).
 deleteFunction :: Connection -> Text -> Maybe ArgCount -> IO ()
-deleteFunction db name nArgs =
-  Direct.deleteFunction db (toUtf8 name) nArgs
-    >>= checkError (DetailConnection db) ("deleteFunction " `appendShow` name)
+deleteFunction db name nArgs = do
+  result <- Direct.deleteFunction db (toUtf8 name) nArgs
+  checkError (DetailConnection db) ("deleteFunction " `appendShow` name) result
 
 funcArgText :: FuncArgs -> ArgIndex -> IO Text
-funcArgText args argIndex =
-  Direct.funcArgText args argIndex
-    >>= fromUtf8 "Database.Sqlite3.funcArgText: Invalid UTF-8"
+funcArgText args argIndex = do
+  result <- Direct.funcArgText args argIndex
+  fromUtf8 "Database.Sqlite3.funcArgText: Invalid UTF-8" result
 
 funcResultSqlData :: FuncContext -> SqlData -> IO ()
 funcResultSqlData ctx datum =
@@ -759,9 +758,9 @@ createCollation ::
   -- | Comparison function.
   (Text -> Text -> Ordering) ->
   IO ()
-createCollation db name cmp =
-  Direct.createCollation db (toUtf8 name) cmp'
-    >>= checkError (DetailConnection db) ("createCollation " `appendShow` name)
+createCollation db name cmp = do
+  result <- Direct.createCollation db (toUtf8 name) cmp'
+  checkError (DetailConnection db) ("createCollation " `appendShow` name) result
   where
     cmp' (Utf8 s1) (Utf8 s2) = cmp (fromUtf8'' s1) (fromUtf8'' s2)
     -- avoid throwing exceptions as much as possible
@@ -769,9 +768,9 @@ createCollation db name cmp =
 
 -- | Delete a collation.
 deleteCollation :: Connection -> Text -> IO ()
-deleteCollation db name =
-  Direct.deleteCollation db (toUtf8 name)
-    >>= checkError (DetailConnection db) ("deleteCollation " `appendShow` name)
+deleteCollation db name = do
+  result <- Direct.deleteCollation db (toUtf8 name)
+  checkError (DetailConnection db) ("deleteCollation " `appendShow` name) result
 
 -- | <https://www.sqlite.org/c3ref/blob_open.html>
 --
@@ -789,15 +788,15 @@ blobOpen ::
   -- | Open the blob for read-write.
   Bool ->
   IO Blob
-blobOpen db zDb zTable zColumn rowid rw =
-  Direct.blobOpen db (toUtf8 zDb) (toUtf8 zTable) (toUtf8 zColumn) rowid rw
-    >>= checkError (DetailConnection db) "blobOpen"
+blobOpen db zDb zTable zColumn rowid rw = do
+  result <- Direct.blobOpen db (toUtf8 zDb) (toUtf8 zTable) (toUtf8 zColumn) rowid rw
+  checkError (DetailConnection db) "blobOpen" result
 
 -- | <https://www.sqlite.org/c3ref/blob_close.html>
 blobClose :: Blob -> IO ()
-blobClose blob@(Direct.Blob db _) =
-  Direct.blobClose blob
-    >>= checkError (DetailConnection db) "blobClose"
+blobClose blob@(Direct.Blob db _) = do
+  result <- Direct.blobClose blob
+  checkError (DetailConnection db) "blobClose" result
 
 -- | <https://www.sqlite.org/c3ref/blob_reopen.html>
 blobReopen ::
@@ -805,9 +804,9 @@ blobReopen ::
   -- | The @ROWID@ of the row.
   Int64 ->
   IO ()
-blobReopen blob@(Direct.Blob db _) rowid =
-  Direct.blobReopen blob rowid
-    >>= checkError (DetailConnection db) "blobReopen"
+blobReopen blob@(Direct.Blob db _) rowid = do
+  result <- Direct.blobReopen blob rowid
+  checkError (DetailConnection db) "blobReopen" result
 
 -- | <https://www.sqlite.org/c3ref/blob_read.html>
 blobRead ::
@@ -817,14 +816,14 @@ blobRead ::
   -- | Offset within the blob.
   Int ->
   IO ByteString
-blobRead blob@(Direct.Blob db _) len offset =
-  Direct.blobRead blob len offset
-    >>= checkError (DetailConnection db) "blobRead"
+blobRead blob@(Direct.Blob db _) len offset = do
+  result <- Direct.blobRead blob len offset
+  checkError (DetailConnection db) "blobRead" result
 
 blobReadBuf :: Blob -> Ptr a -> Int -> Int -> IO ()
-blobReadBuf blob@(Direct.Blob db _) buf len offset =
-  Direct.blobReadBuf blob buf len offset
-    >>= checkError (DetailConnection db) "blobReadBuf"
+blobReadBuf blob@(Direct.Blob db _) buf len offset = do
+  result <- Direct.blobReadBuf blob buf len offset
+  checkError (DetailConnection db) "blobReadBuf" result
 
 -- | <https://www.sqlite.org/c3ref/blob_write.html>
 blobWrite ::
@@ -833,9 +832,9 @@ blobWrite ::
   -- | Offset within the blob.
   Int ->
   IO ()
-blobWrite blob@(Direct.Blob db _) bs offset =
-  Direct.blobWrite blob bs offset
-    >>= checkError (DetailConnection db) "blobWrite"
+blobWrite blob@(Direct.Blob db _) bs offset = do
+  result <- Direct.blobWrite blob bs offset
+  checkError (DetailConnection db) "blobWrite" result
 
 backupInit ::
   -- | Destination database handle.
@@ -847,18 +846,18 @@ backupInit ::
   -- | Source database name.
   Text ->
   IO Backup
-backupInit dstDb dstName srcDb srcName =
-  Direct.backupInit dstDb (toUtf8 dstName) srcDb (toUtf8 srcName)
-    >>= checkError (DetailConnection dstDb) "backupInit"
+backupInit dstDb dstName srcDb srcName = do
+  result <- Direct.backupInit dstDb (toUtf8 dstName) srcDb (toUtf8 srcName)
+  checkError (DetailConnection dstDb) "backupInit" result
 
 backupFinish :: Backup -> IO ()
-backupFinish backup@(Direct.Backup dstDb _) =
-  Direct.backupFinish backup
-    >>= checkError (DetailConnection dstDb) "backupFinish"
+backupFinish backup@(Direct.Backup dstDb _) = do
+  result <- Direct.backupFinish backup
+  checkError (DetailConnection dstDb) "backupFinish" result
 
 backupStep :: Backup -> Int -> IO BackupStepResult
-backupStep backup pages =
-  Direct.backupStep backup pages
-    -- it appears that sqlite does not generate an
-    -- error message when sqlite3_backup_step fails
-    >>= checkError (DetailMessage "failed") "backupStep"
+backupStep backup pages = do
+  result <- Direct.backupStep backup pages
+  -- it appears that sqlite does not generate an
+  -- error message when sqlite3_backup_step fails
+  checkError (DetailMessage "failed") "backupStep" result
