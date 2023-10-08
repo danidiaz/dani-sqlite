@@ -1,3 +1,5 @@
+# This doesn't work so well for development 😔 can't figure how to build the 
+# cabal project with the sqlite library.
 {
   # https://nix.dev/anti-patterns/language#unquoted-urls
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
