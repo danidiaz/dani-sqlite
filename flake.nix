@@ -22,6 +22,7 @@
           pkgs.haskell-language-server
           pkgs.ormolu
           pkgs.sqlite
+          pkgs.wai-app-static
         ];
       };
     };
