@@ -68,6 +68,7 @@ module Sqlite
     -- * Result statistics
     lastInsertRowId,
     changes,
+    totalChanges,
 
     -- * Create custom Sql functions
     createFunction,
@@ -185,6 +186,7 @@ import Sqlite.Direct
     bindParameterCount,
     blobBytes,
     changes,
+    totalChanges,
     clearBindings,
     columnBlob,
     columnCount,
