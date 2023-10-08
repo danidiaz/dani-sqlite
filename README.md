@@ -1,4 +1,4 @@
-dep-t-sqlite
+dani-sqlite
 ============
 
 An amalgamated fork of Irene Knapp's [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite) and Janne Hellsten's [sqlite-simple](https://hackage.haskell.org/package/sqlite-simple).
@@ -8,7 +8,7 @@ you'll have to install the library separately.
 
   Example of `cabal.project.local` pointing to local libs on Windows:
 
-      package dep-t-sqlite
+      package dani-sqlite
           extra-include-dirs: C:/Users/somefolder/sqlite-amalgamation-3350300
           extra-lib-dirs: C:/Users/somefolder/sqlite-dll-win64-x64-3350300
 
@@ -77,6 +77,4 @@ Acknowledgements
 
 - Irene Knapp and the rest of contributors to [direct-sqlite](https://github.com/IreneKnapp/direct-sqlite). 
 - Janne Hellsten and the rest of contributors to  [sqlite-simple](https://hackage.haskell.org/package/sqlite-simple).
-
-
 
