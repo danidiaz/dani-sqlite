@@ -43,9 +43,6 @@ module SQLite.Query (
     -- ** Type conversions
     -- $types
 
-    -- *** Conversion to/from UTCTime
-    -- $utctime
-
     Query(..)
   , Connection(..)
   , ToRow(..)
@@ -792,38 +789,3 @@ getQuery stmt =
 --
 -- You can extend conversion support to your own types be adding your
 -- own 'FromField' / 'ToField' instances.
-
--- $utctime
---
--- SQLite's datetime allows for multiple string representations of UTC
--- time.  The following formats are supported for reading SQLite times
--- into Haskell UTCTime values:
---
--- * YYYY-MM-DD HH:MM
---
--- * YYYY-MM-DD HH:MM:SS
---
--- * YYYY-MM-DD HH:MM:SS.SSS
---
--- * YYYY-MM-DDTHH:MM
---
--- * YYYY-MM-DDTHH:MM:SS
---
--- * YYYY-MM-DDTHH:MM:SS.SSS
---
--- The above may also be optionally followed by a timezone indicator
--- of the form \"[+-]HH:MM\" or just \"Z\".
---
--- When Haskell UTCTime values are converted into SQLite values (e.g.,
--- parameters for a 'query'), the following format is used:
---
--- * YYYY-MM-DD HH:MM:SS.SSS
---
--- The last \".SSS\" subsecond part is dropped if it's zero.  No
--- timezone indicator is used when converting from a UTCTime value
--- into an SQLite string.  SQLite assumes all datetimes are in UTC
--- time.
---
--- The parser and printers are implemented in <Database-SQLite-Simple-Time.html Database.SQLite.Simple.Time>.
---
--- Read more about SQLite's time strings in <http://sqlite.org/lang_datefunc.html>
