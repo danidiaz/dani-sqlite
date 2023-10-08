@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveDataTypeable, DeriveFunctor  #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
 -- |
@@ -177,6 +180,7 @@ instance FromField LB.ByteString where
   fromField f                       = returnError ConversionFailed f "expecting SqlBlob column type"
 
 instance FromField SqlData where
+  fromField :: FieldParser SqlData
   fromField f = Ok (fieldData f)
 
 fieldTypename :: Field -> String

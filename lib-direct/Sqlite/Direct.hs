@@ -1,8 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE BlockArguments #-}
 
 -- |
 -- This API is a slightly lower-level version of "Database.Sqlite3".  Namely:
@@ -158,9 +158,9 @@ import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (lenientDecode)
-import Sqlite.Bindings
 import Foreign
 import Foreign.C
+import Sqlite.Bindings
 import System.IO.Unsafe qualified as IOU
 
 newtype Connection = Connection (Ptr CConnection)
@@ -211,7 +211,7 @@ unsafeUseAsCStringLenNoNull :: ByteString -> (CString -> CNumBytes -> IO a) -> I
 unsafeUseAsCStringLenNoNull bs cb
   | BS.null bs = cb (intPtrToPtr 1) 0
   | otherwise = BSU.unsafeUseAsCStringLen bs $ \(ptr, len) ->
-    cb ptr (fromIntegral len)
+      cb ptr (fromIntegral len)
 
 wrapNullablePtr :: (Ptr a -> b) -> Ptr a -> Maybe b
 wrapNullablePtr f ptr
@@ -227,7 +227,7 @@ toResult a (CError 0) = Right a
 toResult _ code = Left $ decodeError code
 
 -- Only perform the action if the 'CError' is SQLITE_OK.
-toResultM :: Monad m => m a -> CError -> m (Either Error a)
+toResultM :: (Monad m) => m a -> CError -> m (Either Error a)
 toResultM m (CError 0) = Right <$> m
 toResultM _ code = return $ Left $ decodeError code
 
@@ -289,13 +289,13 @@ open (Utf8 path) =
 openV2 :: Maybe Utf8 -> [OpenV2Flag] -> OpenV2Mode -> Utf8 -> IO (Either (Error, Utf8) Connection)
 openV2 mvfs flags mode (Utf8 path) =
   case mvfs of
-    Nothing -> withVFSName nullPtr 
+    Nothing -> withVFSName nullPtr
     Just (Utf8 vfsName) -> BS.useAsCString vfsName withVFSName
-  where  
-    withVFSName cvfsName = 
+  where
+    withVFSName cvfsName =
       BS.useAsCString path \cpath -> do
         alloca \dbOutParam -> do
-          rc <- c_sqlite3_open_v2 cpath dbOutParam (encodeOpenV2ModeAndFlags mode flags) cvfsName 
+          rc <- c_sqlite3_open_v2 cpath dbOutParam (encodeOpenV2ModeAndFlags mode flags) cvfsName
           db <- Connection <$> peek dbOutParam
           -- sqlite3_open returns a sqlite3 even on failure.
           -- That's where we get a more descriptive error message.
@@ -836,8 +836,8 @@ funcArgBlob = extractFuncArg mempty $ \cval -> do
 extractFuncArg :: a -> (Ptr CValue -> IO a) -> FuncArgs -> ArgIndex -> IO a
 extractFuncArg defVal extract (FuncArgs nArgs p) idx
   | 0 <= idx && idx < fromIntegral nArgs = do
-    cval <- peekElemOff p (fromIntegral idx)
-    extract cval
+      cval <- peekElemOff p (fromIntegral idx)
+      extract cval
   | otherwise = return defVal
 
 funcResultInt64 :: FuncContext -> Int64 -> IO ()
@@ -910,7 +910,8 @@ createCollation (Connection db) (Utf8 name) cmp = mask_ $ do
       -- sqlite does not call the destructor for us in case of an
       -- error
       unless (r == CError 0) $
-        destroyCCompare $ castFunPtrToPtr cmpPtr
+        destroyCCompare $
+          castFunPtrToPtr cmpPtr
       return r
   where
     cmp' _ len1 ptr1 len2 ptr2 = handle exnHandler $ do

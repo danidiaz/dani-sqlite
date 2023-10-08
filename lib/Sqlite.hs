@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -7,7 +8,7 @@ module Sqlite
   ( -- * Connection management
     open,
     openV2,
-    VFS(..),
+    VFS (..),
     OpenV2Flag (..),
     OpenV2Mode (..),
     close,
@@ -159,10 +160,9 @@ import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
 import Data.Typeable
+import Foreign.Ptr (Ptr)
 import Sqlite.Direct
-  ( OpenV2Flag (..),
-    OpenV2Mode (..),
-    ArgCount (..),
+  ( ArgCount (..),
     ArgIndex,
     Backup,
     BackupStepResult (..),
@@ -174,6 +174,8 @@ import Sqlite.Direct
     Error (..),
     FuncArgs,
     FuncContext,
+    OpenV2Flag (..),
+    OpenV2Mode (..),
     ParamIndex (..),
     PreparedStatement,
     StepResult (..),
@@ -204,7 +206,6 @@ import Sqlite.Direct
     lastInsertRowId,
   )
 import Sqlite.Direct qualified as Direct
-import Foreign.Ptr (Ptr)
 import Prelude hiding (error)
 
 data SqlData
@@ -297,38 +298,38 @@ checkErrorMsg fn result = case result of
   Left (err, msg) -> throwSqliteException (DetailMessage msg) fn err
   Right a -> return a
 
-appendShow :: Show a => Text -> a -> Text
+appendShow :: (Show a) => Text -> a -> Text
 appendShow txt a = txt `T.append` (T.pack . show) a
 
 -- | <https://www.sqlite.org/c3ref/open.html>
-open :: 
+open ::
   -- | Connection filename.
-  Text -> 
+  Text ->
   IO Connection
 open path =
   Direct.open (toUtf8 path)
     >>= checkErrorMsg ("open " `appendShow` path)
 
 -- | <https://www.sqlite.org/c3ref/open.html>
-openV2 :: 
+openV2 ::
   -- | Name of VFS module to use.
-  VFS -> 
-  [OpenV2Flag] -> 
-  OpenV2Mode -> 
+  VFS ->
+  [OpenV2Flag] ->
+  OpenV2Mode ->
   -- | Database filename.
-  Text -> 
+  Text ->
   IO Connection
 openV2 vfs flags mode path = do
   let mvfs = case vfs of
-        DefaultVFS -> Nothing 
+        DefaultVFS -> Nothing
         VFSWithName vfsName -> Just vfsName
   Direct.openV2 (toUtf8 <$> mvfs) flags mode (toUtf8 path)
     >>= checkErrorMsg ("openV2 " `appendShow` path)
 
-data VFS =
-        DefaultVFS
-      | VFSWithName Text
-      deriving (Show, Eq)
+data VFS
+  = DefaultVFS
+  | VFSWithName Text
+  deriving (Show, Eq)
 
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Connection -> IO ()
@@ -342,35 +343,34 @@ close db =
 -- It works by running the callback in a forked thread.  If interrupted,
 -- it uses 'interrupt' to try to stop the operation.
 interruptibly :: Connection -> IO a -> IO a
-
 interruptibly db io
   | rtsSupportsBoundThreads =
       mask $ \restore -> do
-          mv <- newEmptyMVar
-          tid <- forkIO $ try' (restore io) >>= putMVar mv
+        mv <- newEmptyMVar
+        tid <- forkIO $ try' (restore io) >>= putMVar mv
 
-          let interruptAndWait =
-                  -- Don't let a second exception interrupt us.  Otherwise,
-                  -- the operation will dangle in the background, which could
-                  -- be really bad if it uses locally-allocated resources.
-                  uninterruptibleMask_ $ do
-                      -- Tell Sqlite3 to interrupt the current query.
-                      interrupt db
+        let interruptAndWait =
+              -- Don't let a second exception interrupt us.  Otherwise,
+              -- the operation will dangle in the background, which could
+              -- be really bad if it uses locally-allocated resources.
+              uninterruptibleMask_ $ do
+                -- Tell Sqlite3 to interrupt the current query.
+                interrupt db
 
-                      -- Interrupt the thread in case it's blocked for some
-                      -- other reason.
-                      --
-                      -- NOTE: killThread blocks until the exception is delivered.
-                      -- That's fine, since we're going to wait for the thread
-                      -- to finish anyway.
-                      killThread tid
+                -- Interrupt the thread in case it's blocked for some
+                -- other reason.
+                --
+                -- NOTE: killThread blocks until the exception is delivered.
+                -- That's fine, since we're going to wait for the thread
+                -- to finish anyway.
+                killThread tid
 
-                      -- Wait for the forked thread to finish.
-                      _ <- takeMVar mv
-                      return ()
+                -- Wait for the forked thread to finish.
+                _ <- takeMVar mv
+                return ()
 
-          e <- takeMVar mv `onException` interruptAndWait
-          either throwIO return e
+        e <- takeMVar mv `onException` interruptAndWait
+        either throwIO return e
   | otherwise = io
   where
     try' :: IO a -> IO (Either SomeException a)
@@ -389,7 +389,8 @@ exec db sql =
 execPrint :: Connection -> Text -> IO ()
 execPrint !db !sql =
   interruptibly db $
-    execWithCallback db sql $ \_count _colnames -> T.putStrLn . showValues
+    execWithCallback db sql $
+      \_count _colnames -> T.putStrLn . showValues
   where
     -- This mimics sqlite3's default output mode.  It displays a NULL and an
     -- empty string identically.
@@ -663,7 +664,7 @@ column statement idx = do
 columns :: PreparedStatement -> IO [SqlData]
 columns statement = do
   count <- columnCount statement
-  mapM (column statement) [0 .. count -1]
+  mapM (column statement) [0 .. count - 1]
 
 typedColumn :: ColumnType -> PreparedStatement -> ColumnIndex -> IO SqlData
 typedColumn theType statement idx = case theType of
