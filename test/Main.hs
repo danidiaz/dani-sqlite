@@ -14,8 +14,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (UnicodeException (..))
 import Data.Typeable
-import SQLite
-import SQLite.Direct qualified as Direct
+import Sqlite
+import Sqlite.Direct qualified as Direct
 import StrictEq
 import System.Directory (removeFile, doesFileExist)
 import System.Exit (exitFailure)
@@ -96,7 +96,7 @@ testExec envIO = do
   exec conn ";"
   exec conn " ; ; ; ; ; "
   exec conn "--"
-  Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "/*"
+  Left SqliteException {sqliteError = ErrorError} <- try $ exec conn "/*"
   -- sqlite3_exec does not allow "/*" to be terminated by end of input,
   -- but <https://www.sqlite.org/lang_comment.html> says it's fine.
   exec conn ";--\n;/**/"
@@ -242,7 +242,7 @@ testPrepare envIO = do
         Done <- step stmt -- No row was inserted, because only the CREATE TABLE
         -- statement was run.  The rest was ignored.
         return ()
-    Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "BEGIN"
+    Left SqliteException {sqliteError = ErrorError} <- try $ exec conn "BEGIN"
     -- We're in a transaction already, so this fails.
     exec conn "COMMIT"
   return ()
@@ -251,7 +251,7 @@ testCloseBusy :: IO TestEnv -> Assertion
 testCloseBusy _ = do
   conn <- open ":memory:"
   stmt <- prepare conn "SELECT 1"
-  Left SQLiteException {sqliteError = ErrorBusy} <- try $ close conn
+  Left SqliteException {sqliteError = ErrorBusy} <- try $ close conn
   finalize stmt
   close conn
 
@@ -489,7 +489,7 @@ testColumnName envIO = do
         Done <- step stmt
         checkNames
 
-    -- Column names without AS clauses may change in future versions of SQLite.
+    -- Column names without AS clauses may change in future versions of Sqlite.
     -- This test will fail if they do.
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
       4 <- columnCount stmt
@@ -619,16 +619,16 @@ testErrors envIO = do
       Right () <- Direct.reset stmt
 
       -- But trying to 'step' again should fail.
-      Left SQLiteException {sqliteError = err} <- try $ step stmt
+      Left SqliteException {sqliteError = err} <- try $ step stmt
       assertBool
         "Step after table vanishes should fail with SQLITE_ERROR or SQLITE_SCHEMA"
         ( err == ErrorError
-            || err == ErrorSchema -- SQLite 3.7.13
-            -- SQLite 3.6.22
+            || err == ErrorSchema -- Sqlite 3.7.13
+            -- Sqlite 3.6.22
         )
   where
     expectError err io = do
-      Left SQLiteException {sqliteError = err'} <- try io
+      Left SqliteException {sqliteError = err'} <- try io
       assertEqual "testErrors: expectError" err err'
 
     foo123456 conn =
@@ -667,7 +667,7 @@ testIntegrity envIO = do
         True <- test [SQLInteger minBound, SQLFloat (-1 / 0), SQLText "\0", SQLBlob (B8.pack "\0"), SQLNull]
         True <- test [SQLInteger maxBound, SQLFloat (1 / 0), SQLText "\1114111", SQLBlob ("\255"), SQLNull]
 
-        -- SQLite3 turns NaN into SQLNull.
+        -- Sqlite3 turns NaN into SQLNull.
         True <-
           testWith
             (\_old new -> new === [SQLNull, SQLNull, SQLNull, SQLNull, SQLNull])
@@ -681,11 +681,11 @@ testDecodeError envIO = do
   withStmt conn "SELECT ?" $ \stmt -> do
     Right () <- Direct.bindText stmt 1 invalidUtf8
     Row <- step stmt
-    Left (DecodeError "Database.SQLite3.columnText: Invalid UTF-8" _) <-
+    Left (DecodeError "Database.Sqlite3.columnText: Invalid UTF-8" _) <-
       try $ column stmt 0
     return ()
 
-  -- Verify the assertion that SQLite3 does not validate UTF-8, by writing the
+  -- Verify the assertion that Sqlite3 does not validate UTF-8, by writing the
   -- data to a table on disk and reading it back.
   withConnShared $ \conn -> do
     exec conn "CREATE TABLE testDecodeError (a TEXT)"
@@ -699,7 +699,7 @@ testDecodeError envIO = do
       TextColumn <- columnType stmt 0
       txt <- Direct.columnText stmt 0
       assertEqual "testDecodeError: Database altered our invalid UTF-8" invalidUtf8 txt
-      Left (DecodeError "Database.SQLite3.columnText: Invalid UTF-8" _) <-
+      Left (DecodeError "Database.Sqlite3.columnText: Invalid UTF-8" _) <-
         try $ columnText stmt 0
       Done <- step stmt
       return ()
@@ -724,7 +724,7 @@ testResultStats envIO = do
     True <- return $ (`notElem` [1, 123, maxBound]) rowid
     exec conn "UPDATE tbl SET rowid=rowid+1 WHERE rowid=1 OR rowid=123"
     (_, 2, 6) <- stats conn
-    Left SQLiteException {sqliteError = ErrorConstraint} <-
+    Left SqliteException {sqliteError = ErrorConstraint} <-
       try $ exec conn "UPDATE tbl SET rowid=4"
     exec conn "DELETE FROM tbl"
     (_, 4, 10) <- stats conn
@@ -791,7 +791,7 @@ testCustomFunction envIO = do
       Done <- step stmt
       return ()
     deleteFunction conn "repeat" (Just 2)
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT repeat(3,'abc')"
     return ()
   where
@@ -805,7 +805,7 @@ testCustomFunctionError envIO = do
   TestEnv {..} <- envIO
   withConn $ \conn -> do
     createFunction conn "fail" (Just 0) True throwError
-    Left SQLiteException {..} <- try $ exec conn "SELECT fail()"
+    Left SqliteException {..} <- try $ exec conn "SELECT fail()"
     -- Match only the first 13 characters of the error message here.  The
     -- error message coming from the use of "error" nowadays contains
     -- fragments of the callstack and not just the string we gave it.
@@ -828,7 +828,7 @@ testCustomAggragate envIO = do
       Done <- step stmt
       return ()
     deleteFunction conn "mysum" (Just 1)
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT mysum(n) FROM tbl"
     return ()
   where
@@ -855,7 +855,7 @@ testCustomCollation envIO = do
       Done <- step stmt
       return ()
     deleteCollation conn "len"
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT * FROM tbl ORDER BY n COLLATE len"
     return ()
   where
@@ -913,8 +913,8 @@ testMultiRowInsert envIO = do
     exec conn "CREATE TABLE foo (a INT, b INT)"
     result <- try $ exec conn "INSERT INTO foo VALUES (1,2), (3,4)"
     case result of
-      Left SQLiteException {sqliteError = ErrorError} ->
-        assertFailure "Installed SQLite3 does not support multi-row INSERT via the VALUES clause"
+      Left SqliteException {sqliteError = ErrorError} ->
+        assertFailure "Installed Sqlite3 does not support multi-row INSERT via the VALUES clause"
       Left e ->
         assertFailure $ show e
       Right () -> do
@@ -931,10 +931,10 @@ testMultiRowInsert envIO = do
 testOpenV2CanNotCreate :: IO FilePath -> Assertion
 testOpenV2CanNotCreate filepathIO = do
   filepath <- filepathIO
-  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+  Left SqliteException {sqliteError = ErrorCan'tOpen} <- try do
     db <- openV2 DefaultVFS [] OpenV2ReadOnly (T.pack filepath)
     close db
-  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+  Left SqliteException {sqliteError = ErrorCan'tOpen} <- try do
     db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
     close db
   do
@@ -947,14 +947,14 @@ testExtendedResultCodes :: IO FilePath -> Assertion
 testExtendedResultCodes filepathIO = do
   filepath <- filepathIO
   db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
-  Left SQLiteException {sqliteError = ErrorConstraint } <- try do
+  Left SqliteException {sqliteError = ErrorConstraint } <- try do
     exec
       db
       "CREATE TABLE test_ercs (t TEXT PRIMARY KEY); \
       \INSERT INTO test_ercs VALUES ('val1'); \
       \INSERT INTO test_ercs VALUES ('val1');"
   db <- openV2 DefaultVFS [OpenV2ExtendedResultCode] OpenV2ReadWrite (T.pack filepath)
-  Left SQLiteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
+  Left SqliteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
     exec
       db
       "CREATE TABLE test_ercs_2 (t TEXT PRIMARY KEY); \

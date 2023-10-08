@@ -3,7 +3,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module SQLite
+module Sqlite
   ( -- * Connection management
     open,
     openV2,
@@ -122,7 +122,7 @@ module SQLite
     Connection,
     PreparedStatement,
     SQLData (..),
-    SQLiteException (..),
+    SqliteException (..),
     ColumnType (..),
     FuncContext,
     FuncArgs,
@@ -143,7 +143,7 @@ module SQLite
   )
 where
 
--- Re-exported from Database.SQLite3.Direct without modification.
+-- Re-exported from Database.Sqlite3.Direct without modification.
 -- Note that if this module were in another package, source links would not
 -- be generated for these functions.
 
@@ -159,7 +159,7 @@ import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
 import Data.Typeable
-import SQLite.Direct
+import Sqlite.Direct
   ( OpenV2Flag (..),
     OpenV2Mode (..),
     ArgCount (..),
@@ -203,7 +203,7 @@ import SQLite.Direct
     interrupt,
     lastInsertRowId,
   )
-import SQLite.Direct qualified as Direct
+import Sqlite.Direct qualified as Direct
 import Foreign.Ptr (Ptr)
 import Prelude hiding (error)
 
@@ -215,10 +215,10 @@ data SQLData
   | SQLNull
   deriving (Eq, Show, Typeable)
 
--- | Exception thrown when SQLite3 reports an error.
+-- | Exception thrown when Sqlite3 reports an error.
 --
 -- direct-sqlite may throw other types of exceptions if you misuse the API.
-data SQLiteException = SQLiteException
+data SqliteException = SqliteException
   { -- | Error code returned by API call
     sqliteError :: !Error,
     -- | Text describing the error
@@ -229,20 +229,20 @@ data SQLiteException = SQLiteException
   }
   deriving (Eq, Typeable)
 
--- NB: SQLiteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
+-- NB: SqliteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
 -- to defer message construction in the case where a user catches and
 -- immediately handles the error.
 
-instance Show SQLiteException where
+instance Show SqliteException where
   show
-    SQLiteException
+    SqliteException
       { sqliteError = code,
         sqliteErrorDetails = details,
         sqliteErrorContext = context
       } =
       T.unpack $
         T.concat
-          [ "SQLite3 returned ",
+          [ "Sqlite3 returned ",
             T.pack $ show code,
             " while attempting to perform ",
             context,
@@ -250,7 +250,7 @@ instance Show SQLiteException where
             details
           ]
 
-instance Exception SQLiteException
+instance Exception SqliteException
 
 -- | Like 'decodeUtf8', but substitute a custom error message if
 -- decoding fails.
@@ -279,22 +279,22 @@ renderDetailSource src = case src of
   DetailMessage msg ->
     return msg
 
-throwSQLiteException :: DetailSource -> Text -> Error -> IO a
-throwSQLiteException detailSource context error = do
+throwSqliteException :: DetailSource -> Text -> Error -> IO a
+throwSqliteException detailSource context error = do
   Utf8 details <- renderDetailSource detailSource
   throwIO
-    SQLiteException
+    SqliteException
       { sqliteError = error,
         sqliteErrorDetails = decodeUtf8With lenientDecode details,
         sqliteErrorContext = context
       }
 
 checkError :: DetailSource -> Text -> Either Error a -> IO a
-checkError ds fn = either (throwSQLiteException ds fn) return
+checkError ds fn = either (throwSqliteException ds fn) return
 
 checkErrorMsg :: Text -> Either (Error, Utf8) a -> IO a
 checkErrorMsg fn result = case result of
-  Left (err, msg) -> throwSQLiteException (DetailMessage msg) fn err
+  Left (err, msg) -> throwSqliteException (DetailMessage msg) fn err
   Right a -> return a
 
 appendShow :: Show a => Text -> a -> Text
@@ -354,7 +354,7 @@ interruptibly db io
                   -- the operation will dangle in the background, which could
                   -- be really bad if it uses locally-allocated resources.
                   uninterruptibleMask_ $ do
-                      -- Tell SQLite3 to interrupt the current query.
+                      -- Tell Sqlite3 to interrupt the current query.
                       interrupt db
 
                       -- Interrupt the thread in case it's blocked for some
@@ -407,7 +407,7 @@ execWithCallback db sql cb =
           {-# NOINLINE names #-}
        in cb count names . map (fmap fromUtf8'')
 
-    fromUtf8'' = fromUtf8' "Database.SQLite3.execWithCallback: Invalid UTF-8"
+    fromUtf8'' = fromUtf8' "Database.Sqlite3.execWithCallback: Invalid UTF-8"
 
 type ExecCallback =
   -- | Number of columns, which is the number of items in
@@ -442,7 +442,7 @@ prepareUtf8 db sql = do
     Direct.prepare db sql
       >>= checkError (DetailConnection db) ("prepare " `appendShow` sql)
   case m of
-    Nothing -> fail "Direct.SQLite3.prepare: empty query string"
+    Nothing -> fail "Direct.Sqlite3.prepare: empty query string"
     Just stmt -> return stmt
 
 -- | <https://www.sqlite.org/c3ref/step.html>
@@ -466,7 +466,7 @@ stepNoCB statement =
 -- discard the error.  Otherwise, we would get "double jeopardy".
 -- For example:
 --
---  ok <- try $ step stmt :: IO (Either SQLiteException StepResult)
+--  ok <- try $ step stmt :: IO (Either SqliteException StepResult)
 --  finalize stmt
 --
 -- If 'finalize' threw its error, it would throw the exception the user was
@@ -512,7 +512,7 @@ bindParameterName stmt idx = do
     Nothing -> return Nothing
     Just name -> Just <$> fromUtf8 desc name
   where
-    desc = "Database.SQLite3.bindParameterName: Invalid UTF-8"
+    desc = "Database.Sqlite3.bindParameterName: Invalid UTF-8"
 
 -- | <https://www.sqlite.org/c3ref/column_name.html>
 --
@@ -531,9 +531,9 @@ columnName stmt idx = do
         then throwIO outOfMemory
         else return Nothing
   where
-    desc = "Database.SQLite3.columnName: Invalid UTF-8"
+    desc = "Database.Sqlite3.columnName: Invalid UTF-8"
     outOfMemory =
-      SQLiteException
+      SqliteException
         { sqliteError = ErrorNoMemory,
           sqliteErrorDetails = "out of memory (sqlite3_column_name returned NULL)",
           sqliteErrorContext = "column name"
@@ -587,7 +587,7 @@ bindText statement parameterIndex text =
 -- >> bindSQLData stmt 1 (SQLInteger 1)
 -- >> bindSQLData stmt 2 (SQLInteger 2)
 -- >> bindSQLData stmt 6 (SQLInteger 6)
--- >*** Exception: SQLite3 returned ErrorRange while attempting to perform bind int64.
+-- >*** Exception: Sqlite3 returned ErrorRange while attempting to perform bind int64.
 -- >> step stmt >> columns stmt
 -- >[SQLInteger 1,SQLNull,SQLNull]
 bindSQLData :: PreparedStatement -> ParamIndex -> SQLData -> IO ()
@@ -649,11 +649,11 @@ bindNamed statement params = do
 
 -- | This will throw a 'DecodeError' if the datum contains invalid UTF-8.
 -- If this behavior is undesirable, you can use 'Direct.columnText' from
--- "Database.SQLite3.Direct", which does not perform conversion to 'Text'.
+-- "Database.Sqlite3.Direct", which does not perform conversion to 'Text'.
 columnText :: PreparedStatement -> ColumnIndex -> IO Text
 columnText statement columnIndex =
   Direct.columnText statement columnIndex
-    >>= fromUtf8 "Database.SQLite3.columnText: Invalid UTF-8"
+    >>= fromUtf8 "Database.Sqlite3.columnText: Invalid UTF-8"
 
 column :: PreparedStatement -> ColumnIndex -> IO SQLData
 column statement idx = do
@@ -735,7 +735,7 @@ deleteFunction db name nArgs =
 funcArgText :: FuncArgs -> ArgIndex -> IO Text
 funcArgText args argIndex =
   Direct.funcArgText args argIndex
-    >>= fromUtf8 "Database.SQLite3.funcArgText: Invalid UTF-8"
+    >>= fromUtf8 "Database.Sqlite3.funcArgText: Invalid UTF-8"
 
 funcResultSQLData :: FuncContext -> SQLData -> IO ()
 funcResultSQLData ctx datum =

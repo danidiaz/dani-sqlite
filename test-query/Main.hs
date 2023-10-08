@@ -15,7 +15,7 @@ import TestImports()
 import TestImports
 import UserInstances
 import Utf8Strings
-import SQLite
+import Sqlite
 
 tests :: [TestEnv -> Test]
 tests =

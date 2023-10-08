@@ -24,7 +24,7 @@ import Common
 import Data.Maybe(fromJust)
 import Data.Tuple (Solo(..))
 
-import qualified SQLite as Base
+import qualified Sqlite as Base
 
 testBind :: TestEnv -> Test
 testBind TestEnv{..} = TestCase $ do

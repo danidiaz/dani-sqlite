@@ -7,7 +7,7 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.SQLite.Simple.Internal
+-- Module:      Database.Sqlite.Simple.Internal
 -- Copyright:   (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
 -- License:     BSD3
@@ -20,7 +20,7 @@
 -- does not.  Also, at the moment there are things in here that aren't
 -- particularly internal and are exported elsewhere;  these will eventually
 -- disappear from this module.
-module SQLite.Query.Internal where
+module Sqlite.Query.Internal where
 
 import Control.Applicative
 import Control.Exception (Exception)
@@ -32,8 +32,8 @@ import Data.ByteString.Char8 ()
 import Data.IORef
 import Data.Typeable (Typeable)
 import Data.Word
-import SQLite.Query.Ok
-import qualified SQLite as Base
+import Sqlite.Query.Ok
+import qualified Sqlite as Base
 
 -- -- | Connection to an open database.
 -- --

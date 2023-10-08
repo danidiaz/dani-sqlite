@@ -9,9 +9,9 @@ import           Common
 import           Data.Int (Int64)
 import           Data.Typeable (Typeable)
 import qualified Data.Text as T
-import           SQLite.Query.FromField
-import           SQLite.Query.Ok
-import           SQLite.Query.ToField
+import           Sqlite.Query.FromField
+import           Sqlite.Query.Ok
+import           Sqlite.Query.ToField
 
 newtype MyType = MyType String deriving (Eq, Show, Typeable)
 

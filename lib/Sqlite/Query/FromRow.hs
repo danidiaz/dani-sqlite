@@ -3,7 +3,7 @@
 
 ------------------------------------------------------------------------------
 -- |
--- Module:      Database.SQLite.Simple.FromRow
+-- Module:      Database.Sqlite.Simple.FromRow
 -- Copyright:   (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
 -- License:     BSD3
@@ -17,7 +17,7 @@
 -- elements.
 ------------------------------------------------------------------------------
 
-module SQLite.Query.FromRow
+module Sqlite.Query.FromRow
      ( GFromRow(..)
      , FromRow(..)
      , RowParser
@@ -33,10 +33,10 @@ import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Class
 import           GHC.Generics
 
-import           SQLite.Query.FromField
-import           SQLite.Query.Internal
-import           SQLite.Query.Ok
-import           SQLite.Query.Types
+import           Sqlite.Query.FromField
+import           Sqlite.Query.Internal
+import           Sqlite.Query.Ok
+import           Sqlite.Query.Types
 
 
 -- | Generic derivation of 'FromRow'.

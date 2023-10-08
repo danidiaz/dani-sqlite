@@ -4,7 +4,7 @@
 
 ------------------------------------------------------------------------------
 -- |
--- Module:      Database.SQLite.Simple.FromField
+-- Module:      Database.Sqlite.Simple.FromField
 -- Copyright:   (c) 2011 MailRank, Inc.
 --              (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
@@ -16,15 +16,15 @@
 -- returned by a SQL query into a more useful Haskell representation.
 --
 -- A Haskell numeric type is considered to be compatible with all
--- SQLite numeric types that are less accurate than it. For instance,
--- the Haskell 'Double' type is compatible with the SQLite's 32-bit
+-- Sqlite numeric types that are less accurate than it. For instance,
+-- the Haskell 'Double' type is compatible with the Sqlite's 32-bit
 -- @Int@ type because it can represent a @Int@ exactly. On the other hand,
 -- since a 'Double' might lose precision if representing a 64-bit @BigInt@,
 -- the two are /not/ considered compatible.
 --
 ------------------------------------------------------------------------------
 
-module SQLite.Query.FromField
+module Sqlite.Query.FromField
     (
       FromField(..)
     , FieldParser
@@ -45,10 +45,10 @@ import           Data.Typeable (Typeable, typeOf)
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Float (double2Float)
 
-import           SQLite as Base
-import           SQLite.Query.Types
-import           SQLite.Query.Internal
-import           SQLite.Query.Ok
+import           Sqlite as Base
+import           Sqlite.Query.Types
+import           Sqlite.Query.Internal
+import           Sqlite.Query.Ok
 
 -- | Exception thrown if conversion from a SQL value to a Haskell
 -- value fails.

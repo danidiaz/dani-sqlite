@@ -8,7 +8,7 @@ module DirectSqlite (
 import Common
 
 import Control.Exception (bracket)
-import qualified SQLite as DS
+import qualified Sqlite as DS
 import Data.Tuple (Solo(..))
 
 testDirectSqlite :: TestEnv -> Test

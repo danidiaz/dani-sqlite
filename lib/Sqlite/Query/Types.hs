@@ -7,7 +7,7 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.SQLite.Simple.Types
+-- Module:      Database.Sqlite.Simple.Types
 -- Copyright:   (c) 2011 MailRank, Inc.
 --              (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
@@ -16,7 +16,7 @@
 -- Portability: portable
 --
 -- Top-level module for sqlite-simple.
-module SQLite.Query.Types
+module Sqlite.Query.Types
   ( Null (..),
     Solo (..),
     Query (..),
@@ -49,7 +49,7 @@ instance Eq Null where
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- >
--- > import Database.SQLite.Simple
+-- > import Database.Sqlite.Simple
 -- >
 -- > q :: Query
 -- > q = "select ?"

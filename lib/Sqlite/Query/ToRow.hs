@@ -2,7 +2,7 @@
   StandaloneDeriving #-}
 ------------------------------------------------------------------------------
 -- |
--- Module:      Database.SQLite.Simple.ToRow
+-- Module:      Database.Sqlite.Simple.ToRow
 -- Copyright:   (c) 2011 MailRank, Inc.
 --              (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
@@ -18,17 +18,17 @@
 --
 ------------------------------------------------------------------------------
 
-module SQLite.Query.ToRow
+module Sqlite.Query.ToRow
     ( GToRow(..)
     , ToRow(..)
     ) where
 
 import GHC.Generics
 
-import SQLite.Query.ToField (ToField(..))
-import SQLite.Query.Types (Solo(..), (:.)(..))
+import Sqlite.Query.ToField (ToField(..))
+import Sqlite.Query.Types (Solo(..), (:.)(..))
 
-import SQLite (SQLData(..))
+import Sqlite (SQLData(..))
 
 -- | Generic derivation of 'ToRow'.  For details about what can be
 -- derived refer to 'Database.Sqlite.Simple.FromRow.GFromRow'.

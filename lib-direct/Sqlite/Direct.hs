@@ -5,13 +5,13 @@
 {-# LANGUAGE BlockArguments #-}
 
 -- |
--- This API is a slightly lower-level version of "Database.SQLite3".  Namely:
+-- This API is a slightly lower-level version of "Database.Sqlite3".  Namely:
 --
 --  * It returns errors instead of throwing them.
 --
 --  * It only uses cheap conversions.  None of these bindings convert from
 --    'String' or 'T.Text'.
-module SQLite.Direct
+module Sqlite.Direct
   ( -- * Connection management
     open,
     openV2,
@@ -158,7 +158,7 @@ import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (lenientDecode)
-import SQLite.Bindings
+import Sqlite.Bindings
 import Foreign
 import Foreign.C
 import System.IO.Unsafe qualified as IOU
@@ -463,7 +463,7 @@ setTrace (Connection db) logger =
 -- @
 --  autocommit <- 'getAutoCommit' conn
 --  'Control.Monad.when' (not autocommit) $
---      'Database.SQLite3.exec' conn \"ROLLBACK\"
+--      'Database.Sqlite3.exec' conn \"ROLLBACK\"
 -- @
 getAutoCommit :: Connection -> IO Bool
 getAutoCommit (Connection db) =

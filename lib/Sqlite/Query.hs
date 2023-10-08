@@ -6,7 +6,7 @@
 
 ------------------------------------------------------------------------------
 -- |
--- Module:      Database.SQLite.Simple
+-- Module:      Database.Sqlite.Simple
 -- Copyright:   (c) 2011 MailRank, Inc.
 --              (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
@@ -16,7 +16,7 @@
 --
 ------------------------------------------------------------------------------
 
-module SQLite.Query (
+module Sqlite.Query (
     -- ** Examples of use
     -- $use
 
@@ -94,8 +94,8 @@ module SQLite.Query (
     -- ** Exceptions
   , FormatError(..)
   , ResultError(..)
-  , SQLite.SQLiteException(..)
-  , SQLite.Error(..)
+  , Sqlite.SqliteException(..)
+  , Sqlite.Error(..)
   ) where
 
 import           Control.Exception
@@ -106,18 +106,18 @@ import           Data.Int (Int64)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
-import           SQLite.Query.Types
-import SQLite (PreparedStatement, ColumnIndex, SQLData)
-import SQLite qualified
-import SQLite.Direct (Connection)
-import SQLite.Direct qualified 
+import           Sqlite.Query.Types
+import Sqlite (PreparedStatement, ColumnIndex, SQLData)
+import Sqlite qualified
+import Sqlite.Direct (Connection)
+import Sqlite.Direct qualified 
 
-import           SQLite.Query.FromField (ResultError(..))
-import           SQLite.Query.FromRow
-import           SQLite.Query.Internal
-import           SQLite.Query.Ok
-import           SQLite.Query.ToField (ToField(..))
-import           SQLite.Query.ToRow (ToRow(..))
+import           Sqlite.Query.FromField (ResultError(..))
+import           Sqlite.Query.FromRow
+import           Sqlite.Query.Internal
+import           Sqlite.Query.Ok
+import           Sqlite.Query.ToField (ToField(..))
+import           Sqlite.Query.ToRow (ToRow(..))
 
 data NamedParam where
     (:=) :: (ToField v) => T.Text -> v -> NamedParam
@@ -144,8 +144,8 @@ data FormatError = FormatError {
 
 instance Exception FormatError
 
-unUtf8 :: SQLite.Direct.Utf8 -> T.Text
-unUtf8 (SQLite.Direct.Utf8 bs) = TE.decodeUtf8 bs
+unUtf8 :: Sqlite.Direct.Utf8 -> T.Text
+unUtf8 (Sqlite.Direct.Utf8 bs) = TE.decodeUtf8 bs
 
 -- | Binds parameters to a prepared statement. Once 'nextRow' returns 'Nothing',
 -- the statement must be reset with the 'reset' function before it can be
@@ -153,10 +153,10 @@ unUtf8 (SQLite.Direct.Utf8 bs) = TE.decodeUtf8 bs
 bind :: (ToRow params) => PreparedStatement -> params -> IO ()
 bind stmt params = do
   let qp = toRow params
-  stmtParamCount <- SQLite.bindParameterCount stmt
+  stmtParamCount <- Sqlite.bindParameterCount stmt
   when (length qp /= fromIntegral stmtParamCount) (throwColumnMismatch qp stmtParamCount)
   mapM_ (errorCheckParamName qp) [1..stmtParamCount]
-  SQLite.bind stmt qp
+  Sqlite.bind stmt qp
   where
     throwColumnMismatch qp nParams = do
       templ <- getQuery stmt
@@ -164,7 +164,7 @@ bind stmt params = do
                 show (length qp) ++ " arguments given") templ qp
     errorCheckParamName qp paramNdx = do
       templ <- getQuery stmt
-      name <- SQLite.bindParameterName stmt paramNdx
+      name <- Sqlite.bindParameterName stmt paramNdx
       case name of
         Just n ->
           fmtError ("Only unnamed '?' query parameters are accepted, '"++T.unpack n++"' given")
@@ -174,16 +174,16 @@ bind stmt params = do
 -- | Binds named parameters to a prepared statement.
 bindNamed :: PreparedStatement -> [NamedParam] -> IO ()
 bindNamed stmt params = do
-  stmtParamCount <- SQLite.bindParameterCount stmt
+  stmtParamCount <- Sqlite.bindParameterCount stmt
   when (length params /= fromIntegral stmtParamCount) $ throwColumnMismatch stmtParamCount
   bind stmt params
   where
     bind stmt params =
       mapM_ (\(n := v) -> do
-              idx <- SQLite.Direct.bindParameterIndex stmt (SQLite.Direct.Utf8 . TE.encodeUtf8 $ n)
+              idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
               case idx of
                 Just i ->
-                  SQLite.bindSQLData stmt i (toField v)
+                  Sqlite.bindSQLData stmt i (toField v)
                 Nothing -> do
                   templ <- getQuery stmt
                   fmtError ("Unknown named parameter '" ++ T.unpack n ++ "'")
@@ -198,7 +198,7 @@ bindNamed stmt params = do
 -- | Resets a statement. This does not reset bound parameters, if any, but
 -- allows the statement to be reexecuted again by invoking 'nextRow'.
 reset :: PreparedStatement -> IO ()
-reset  stmt = SQLite.reset stmt
+reset  stmt = Sqlite.reset stmt
 
 -- | Return the name of a a particular column in the result set of a
 -- 'PreparedStatement'.  Throws an 'ArrayException' if the colum index is out
@@ -206,7 +206,7 @@ reset  stmt = SQLite.reset stmt
 --
 -- <http://www.sqlite.org/c3ref/column_name.html>
 columnName :: PreparedStatement -> ColumnIndex -> IO T.Text
-columnName  stmt n = SQLite.Direct.columnName stmt n >>= takeUtf8
+columnName  stmt n = Sqlite.Direct.columnName stmt n >>= takeUtf8
   where
     takeUtf8 (Just s) = return $ unUtf8 s
     takeUtf8 Nothing  =
@@ -214,14 +214,14 @@ columnName  stmt n = SQLite.Direct.columnName stmt n >>= takeUtf8
 
 -- | Return number of columns in the query
 columnCount :: PreparedStatement -> IO ColumnIndex
-columnCount  stmt = SQLite.Direct.columnCount stmt
+columnCount  stmt = Sqlite.Direct.columnCount stmt
 
 -- | Binds parameters to a prepared statement, and 'reset's the statement when
 -- the callback completes, even in the presence of exceptions.
 --
 -- Use 'withBind' to reuse prepared statements.  Because it 'reset's the
 -- statement /after/ each usage, it avoids a pitfall involving implicit
--- transactions.  SQLite creates an implicit transaction if you don't say
+-- transactions.  Sqlite creates an implicit transaction if you don't say
 -- @BEGIN@ explicitly, and does not commit it until all active statements are
 -- finished with either 'reset' or 'closeStatement'.
 withBind :: (ToRow params) => PreparedStatement -> params -> IO a -> IO a
@@ -236,11 +236,11 @@ withBind stmt params io = do
 -- with 'nextRow'.
 openStatement :: Connection -> Query -> IO PreparedStatement
 openStatement conn (Query t) = do
-  SQLite.prepare conn t
+  Sqlite.prepare conn t
 
 -- | Closes a prepared statement.
 closeStatement :: PreparedStatement -> IO ()
-closeStatement  stmt = SQLite.finalize stmt
+closeStatement  stmt = Sqlite.finalize stmt
 
 -- | Opens a prepared statement, executes an action using this statement, and
 -- closes the statement, even in the presence of exceptions.
@@ -276,7 +276,7 @@ withStatementNamedParams conn template namedParams action =
 execute :: (ToRow q) => Connection -> Query -> q -> IO ()
 execute conn template qs =
   withStatementParams conn template qs $ \stmt ->
-    void . SQLite.step $ stmt
+    void . Sqlite.step $ stmt
 
 -- | Execute a multi-row @INSERT@, @UPDATE@, or other SQL query that is not
 -- expected to return results.
@@ -286,7 +286,7 @@ executeMany :: ToRow q => Connection -> Query -> [q] -> IO ()
 executeMany conn template paramRows = withStatement conn template $ \stmt -> do
   forM_ paramRows $ \params ->
     withBind stmt params
-      (void . SQLite.step $ stmt)
+      (void . Sqlite.step $ stmt)
 
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
@@ -340,14 +340,14 @@ queryNamed conn templ params =
 execute_ :: Connection -> Query -> IO ()
 execute_ conn template =
   withStatement conn template $ \stmt ->
-    void $ SQLite.step stmt
+    void $ Sqlite.step stmt
 
 -- | A version of 'execute' where the query parameters (placeholders)
 -- are named.
 executeNamed :: Connection -> Query -> [NamedParam] -> IO ()
 executeNamed conn template params =
   withStatementNamedParams conn template params $ \stmt ->
-    void $ SQLite.step stmt
+    void $ Sqlite.step stmt
 
 -- | Perform a @SELECT@ or other SQL query that is expected to return results.
 -- Results are converted and fed into the 'action' callback as they are being
@@ -414,14 +414,14 @@ nextRow = nextRowWith fromRow
 
 nextRowWith :: RowParser r -> PreparedStatement -> IO (Maybe r)
 nextRowWith fromRow_  stmt = do
-  statRes <- SQLite.step stmt
+  statRes <- Sqlite.step stmt
   case statRes of
-    SQLite.Row -> do
-      rowRes <- SQLite.columns stmt
+    Sqlite.Row -> do
+      rowRes <- Sqlite.columns stmt
       let nCols = length rowRes
       row <- convertRow fromRow_ rowRes nCols
       return $ Just row
-    SQLite.Done -> return Nothing
+    Sqlite.Done -> return Nothing
 
 convertRow :: RowParser r -> [SQLData] -> Int -> IO r
 convertRow fromRow_ rowRes ncols = do
@@ -473,7 +473,7 @@ withTransactionPrivate conn action ttype =
 
 -- | Run an IO action inside a SQL transaction started with @BEGIN IMMEDIATE
 -- TRANSACTION@, which immediately blocks all other database connections from
--- writing.  The default SQLite3 @BEGIN TRANSACTION@ does not acquire the write
+-- writing.  The default Sqlite3 @BEGIN TRANSACTION@ does not acquire the write
 -- lock on @BEGIN@ nor on @SELECT@ but waits until you try to change data.  If
 -- the action throws any kind of an exception, the transaction will be rolled
 -- back with @ROLLBACK TRANSACTION@.  Otherwise the results are committed with
@@ -497,21 +497,21 @@ withExclusiveTransaction conn action =
 --
 -- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
 lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = SQLite.Direct.lastInsertRowId 
+lastInsertRowId = Sqlite.Direct.lastInsertRowId 
 
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
 -- Return the number of rows that were changed, inserted, or deleted
 -- by the most recent @INSERT@, @DELETE@, or @UPDATE@ statement.
 changes :: Connection -> IO Int
-changes = SQLite.Direct.changes
+changes = Sqlite.Direct.changes
 
 -- | <http://www.sqlite.org/c3ref/total_changes.html>
 --
 -- Return the total number of row changes caused by @INSERT@, @DELETE@,
 -- or @UPDATE@ statements since the 'Database' was opened.
 totalChanges :: Connection -> IO Int
-totalChanges = SQLite.Direct.totalChanges
+totalChanges = Sqlite.Direct.totalChanges
 
 -- | Run an IO action inside a SQL transaction started with @BEGIN
 -- TRANSACTION@.  If the action throws any kind of an exception, the
@@ -529,12 +529,12 @@ fmtError msg q xs =
     , fmtParams   = map show xs
     }
 
-getQuery :: SQLite.PreparedStatement -> IO Query
+getQuery :: Sqlite.PreparedStatement -> IO Query
 getQuery stmt =
-  toQuery <$> SQLite.Direct.statementSql stmt
+  toQuery <$> Sqlite.Direct.statementSql stmt
   where
     toQuery =
-      Query . maybe "no query string" (\(SQLite.Direct.Utf8 s) -> TE.decodeUtf8 s)
+      Query . maybe "no query string" (\(Sqlite.Direct.Utf8 s) -> TE.decodeUtf8 s)
 
 -- $use
 -- An example that creates a table 'test', inserts a couple of rows
@@ -547,8 +547,8 @@ getQuery stmt =
 -- >
 -- >import           Control.Applicative
 -- >import qualified Data.Text as T
--- >import           Database.SQLite.Simple
--- >import           Database.SQLite.Simple.FromRow
+-- >import           Database.Sqlite.Simple
+-- >import           Database.Sqlite.Simple.FromRow
 -- >
 -- >data TestField = TestField Int T.Text deriving (Show)
 -- >
@@ -591,7 +591,7 @@ getQuery stmt =
 --
 -- > {-# LANGUAGE OverloadedStrings #-}
 -- >
--- > import Database.SQLite.Simple
+-- > import Database.Sqlite.Simple
 -- >
 -- > hello = do
 -- >   conn <- open "test.db"
@@ -604,7 +604,7 @@ getQuery stmt =
 -- $subst
 --
 -- Since applications need to be able to construct queries with
--- parameters that change, this library uses SQLite's parameter
+-- parameters that change, this library uses Sqlite's parameter
 -- binding query substitution capability.
 --
 -- This library restricts parameter substitution to work only with
@@ -615,7 +615,7 @@ getQuery stmt =
 --
 -- You should always use parameter substitution instead of inlining
 -- your dynamic parameters into your queries with messy string
--- concatenation.  SQLite will automatically quote and escape your
+-- concatenation.  Sqlite will automatically quote and escape your
 -- data into these placeholder parameters; this defeats the single
 -- most common injection vector for malicious data.
 
@@ -627,7 +627,7 @@ getQuery stmt =
 -- query executes, the first \"@?@\" in the template will be replaced
 -- with the first element of the tuple, the second \"@?@\" with the
 -- second element, and so on.  This substitution happens inside the
--- native SQLite implementation.
+-- native Sqlite implementation.
 --
 -- For example, given the following 'Query' template:
 --
@@ -656,7 +656,7 @@ getQuery stmt =
 -- 'foldNamed'.  These functions take a list of 'NamedParam's which
 -- are key-value pairs binding a value to an argument name.  As is the
 -- case with \"@?@\" parameters, named parameters are automatically
--- escaped by the SQLite library.  The parameter names are prefixed
+-- escaped by the Sqlite library.  The parameter names are prefixed
 -- with either @:@ or @\@@, e.g. @:foo@ or @\@foo@.
 --
 -- Example:
@@ -770,16 +770,16 @@ getQuery stmt =
 -- permissive. Here are the rules.
 --
 -- * For numeric types, any Haskell type that can accurately represent
---   an SQLite INTEGER is considered \"compatible\".
+--   an Sqlite INTEGER is considered \"compatible\".
 --
 -- * If a numeric incompatibility is found, 'query' will throw a
 --   'ResultError'.
 --
--- * SQLite's TEXT type is always encoded in UTF-8.  Thus any text
---   data coming from an SQLite database should always be compatible
+-- * Sqlite's TEXT type is always encoded in UTF-8.  Thus any text
+--   data coming from an Sqlite database should always be compatible
 --   with Haskell 'String' and 'Text' types.
 --
--- * SQLite's BLOB type will only be conversible to a Haskell
+-- * Sqlite's BLOB type will only be conversible to a Haskell
 --   'ByteString'.
 --
 -- You can extend conversion support to your own types be adding your

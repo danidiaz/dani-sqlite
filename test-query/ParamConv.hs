@@ -19,7 +19,7 @@ module ParamConv (
 import           Data.Int
 import           Data.Word
 import qualified Data.Text as T
-import SQLite.Query.Types (Null(..))
+import Sqlite.Query.Types (Null(..))
 import Data.Tuple (Solo(..))
 import Common
 
@@ -129,7 +129,7 @@ testParamConvFloat TestEnv{..} = TestCase $ do
 testParamConvBools :: TestEnv -> Test
 testParamConvBools TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE bt (id INTEGER PRIMARY KEY, b BOOLEAN)"
-  -- Booleans are ints with values 0 or 1 on SQLite
+  -- Booleans are ints with values 0 or 1 on Sqlite
   execute_ conn "INSERT INTO bt (b) VALUES (0)"
   execute_ conn "INSERT INTO bt (b) VALUES (1)"
   [Solo r1, Solo r2] <- query_ conn "SELECT b from bt" :: IO [Solo Bool]

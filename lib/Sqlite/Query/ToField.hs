@@ -2,7 +2,7 @@
 
 ------------------------------------------------------------------------------
 -- |
--- Module:      Database.SQLite.Simple.ToField
+-- Module:      Database.Sqlite.Simple.ToField
 -- Copyright:   (c) 2011 MailRank, Inc.
 --              (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
@@ -10,12 +10,12 @@
 -- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
 -- Portability: portable
 --
--- The 'ToField' typeclass, for rendering a parameter to an SQLite
+-- The 'ToField' typeclass, for rendering a parameter to an Sqlite
 -- value to be bound as a SQL query parameter.
 --
 ------------------------------------------------------------------------------
 
-module SQLite.Query.ToField (ToField(..)) where
+module Sqlite.Query.ToField (ToField(..)) where
 
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Lazy as LB
@@ -26,8 +26,8 @@ import qualified Data.Text.Encoding as T
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Float
 
-import           SQLite as Base
-import           SQLite.Query.Types (Null)
+import           Sqlite as Base
+import           Sqlite.Query.Types (Null)
 
 -- | A type that may be used as a single parameter to a SQL query.
 class ToField a where
