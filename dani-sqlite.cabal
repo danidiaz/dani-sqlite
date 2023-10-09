@@ -1,4 +1,4 @@
-cabal-version:      3.6
+cabal-version:      3.8
 name:               dani-sqlite
 version:            0.1.0.0
 synopsis:           Low-level binding to SQLite3.  Includes UTF8 and BLOB support.
@@ -101,7 +101,7 @@ test-suite test-query
                 , Fold
                 , ParamConv
                 , Query
-                , Statement
+                , PreparedStatement
                 , TestImports
                 , UserInstances
                 , Utf8Strings

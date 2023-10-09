@@ -1,3 +1,5 @@
+Use the same PreparedStatement and ColumnIndex types in SQLite and SQLite.Query.
+
 Statement renamed to PreparedStatement
 
 moved the bindings modules and the direct module to their own public

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Statement (
+module PreparedStatement (
     testBind
   , testDoubleBind
   , testPreparedStatements
@@ -8,6 +8,19 @@ module Statement (
   ) where
 
 import Common
+    ( Solo(Solo),
+      ColumnIndex(ColumnIndex),
+      execute_,
+      withStatement,
+      columnName,
+      columnCount,
+      withBind,
+      nextRow,
+      (@=?),
+      (@?=),
+      assertEqual,
+      Test(TestCase),
+      TestEnv(..) )
 import Data.Maybe(fromJust)
 import Data.Tuple (Solo(..))
 
@@ -62,6 +75,6 @@ testPreparedStatementsColumnCount TestEnv{..} = TestCase $ do
     colName @?= "t"
     ColumnIndex colCount <- columnCount stmt
     colCount @?= 1
-    let baseStatment = unPreparedStatement stmt
+    let baseStatment = stmt
     colCountBase <- Base.columnCount baseStatment
     colCountBase @?= 1
