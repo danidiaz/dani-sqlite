@@ -15,7 +15,7 @@ import TestImports()
 import TestImports
 import UserInstances
 import Utf8Strings
-import SQLite
+import Sqlite
 
 tests :: [TestEnv -> Test]
 tests =
@@ -48,7 +48,7 @@ tests =
     , TestLabel "Utf8"      . testUtf8Simplest
     , TestLabel "Utf8"      . testBlobs
     , TestLabel "Instances" . testUserFromField
-    , TestLabel "Instances" . testSQLDataFromField
+    , TestLabel "Instances" . testSqlDataFromField
     , TestLabel "Fold"      . testFolds
     , TestLabel "Statement" . testBind
     , TestLabel "Statement" . testDoubleBind

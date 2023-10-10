@@ -14,8 +14,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (UnicodeException (..))
 import Data.Typeable
-import SQLite
-import SQLite.Direct qualified as Direct
+import Sqlite
+import Sqlite.Direct qualified as Direct
 import StrictEq
 import System.Directory (removeFile, doesFileExist)
 import System.Exit (exitFailure)
@@ -96,7 +96,7 @@ testExec envIO = do
   exec conn ";"
   exec conn " ; ; ; ; ; "
   exec conn "--"
-  Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "/*"
+  Left SqliteException {sqliteError = ErrorError} <- try $ exec conn "/*"
   -- sqlite3_exec does not allow "/*" to be terminated by end of input,
   -- but <https://www.sqlite.org/lang_comment.html> says it's fine.
   exec conn ";--\n;/**/"
@@ -113,15 +113,15 @@ testExec envIO = do
       \INSERT INTO foo VALUES (null, null)"
     withStmt conn ("SELECT * FROM foo") $ \stmt -> do
       Row <- step stmt
-      [SQLFloat 3.5, SQLNull] <- columns stmt
+      [SqlFloat 3.5, SqlNull] <- columns stmt
       Row <- step stmt
-      [SQLNull, SQLText "Ự₦ⓘ₡ợ₫ḝ"] <- columns stmt
+      [SqlNull, SqlText "Ự₦ⓘ₡ợ₫ḝ"] <- columns stmt
       Row <- step stmt
-      [SQLNull, SQLText ""] <- columns stmt
+      [SqlNull, SqlText ""] <- columns stmt
       Row <- step stmt
-      [SQLNull, SQLText "null"] <- columns stmt
+      [SqlNull, SqlText "null"] <- columns stmt
       Row <- step stmt
-      [SQLNull, SQLNull] <- columns stmt
+      [SqlNull, SqlNull] <- columns stmt
       Done <- step stmt
       return ()
 
@@ -179,15 +179,15 @@ testTracing envIO = do
       Row <- step stmt
       res <- columns stmt
       Done <- step stmt
-      assertEqual "tracing" [SQLNull] res
+      assertEqual "tracing" [SqlNull] res
       Direct.Utf8 msg <- readChan chan
       assertEqual "tracing" "SELECT null" msg
     withStmt conn "SELECT 1+?" $ \stmt -> do
-      bind stmt [SQLInteger 2]
+      bind stmt [SqlInteger 2]
       Row <- step stmt
       Done <- step stmt
       reset stmt
-      bind stmt [SQLInteger 3]
+      bind stmt [SqlInteger 3]
       Row <- step stmt
       Done <- step stmt
       Direct.Utf8 msg <- readChan chan
@@ -197,7 +197,7 @@ testTracing envIO = do
       -- Check that disabling works too
       Direct.setTrace conn Nothing
       reset stmt
-      bind stmt [SQLInteger 3]
+      bind stmt [SqlInteger 3]
       Row <- step stmt
       Done <- step stmt
       writeChan chan (Direct.Utf8 "empty")
@@ -213,7 +213,7 @@ testSimplest envIO = do
   res <- column stmt 0
   Done <- step stmt
   finalize stmt
-  assertEqual "1+1" (SQLInteger 2) res
+  assertEqual "1+1" (SqlInteger 2) res
 
 testPrepare :: IO TestEnv -> Assertion
 testPrepare envIO = do
@@ -242,7 +242,7 @@ testPrepare envIO = do
         Done <- step stmt -- No row was inserted, because only the CREATE TABLE
         -- statement was run.  The rest was ignored.
         return ()
-    Left SQLiteException {sqliteError = ErrorError} <- try $ exec conn "BEGIN"
+    Left SqliteException {sqliteError = ErrorError} <- try $ exec conn "BEGIN"
     -- We're in a transaction already, so this fails.
     exec conn "COMMIT"
   return ()
@@ -251,7 +251,7 @@ testCloseBusy :: IO TestEnv -> Assertion
 testCloseBusy _ = do
   conn <- open ":memory:"
   stmt <- prepare conn "SELECT 1"
-  Left SQLiteException {sqliteError = ErrorBusy} <- try $ close conn
+  Left SqliteException {sqliteError = ErrorBusy} <- try $ close conn
   finalize stmt
   close conn
 
@@ -263,7 +263,7 @@ testBind envIO = do
   bracket (prepare conn "SELECT ?,?") finalize testBind3
   where
     testBind1 stmt = do
-      let params = [SQLInteger 3]
+      let params = [SqlInteger 3]
       bind stmt params
       Row <- step stmt
       res <- columns stmt
@@ -271,12 +271,12 @@ testBind envIO = do
       assertEqual "single param" params res
 
     testBind2 stmt = do
-      let params = [SQLInteger 1, SQLInteger 1]
+      let params = [SqlInteger 1, SqlInteger 1]
       bind stmt params
       Row <- step stmt
       res <- columns stmt
       Done <- step stmt
-      assertEqual "two params param" [SQLInteger 2] res
+      assertEqual "two params param" [SqlInteger 2] res
 
     testBind3 stmt = do
       let len = 7
@@ -286,7 +286,7 @@ testBind envIO = do
       Row <- step stmt
       res <- columns stmt
       Done <- step stmt
-      assertEqual "blob vs. zeroblob" [SQLBlob bs, SQLBlob bs] res
+      assertEqual "blob vs. zeroblob" [SqlBlob bs, SqlBlob bs] res
 
 -- Test bindParameterCount
 testBindParamCounts :: IO TestEnv -> Assertion
@@ -335,7 +335,7 @@ testBindErrorValidation envIO = do
     -- Invalid use, one param in q string, none given
     testException1 stmt = bind stmt []
     -- Invalid use, one param in q string, 2 given
-    testException2 stmt = bind stmt [SQLInteger 1, SQLInteger 2]
+    testException2 stmt = bind stmt [SqlInteger 1, SqlInteger 2]
 
 testNamedBindParams :: IO TestEnv -> Assertion
 testNamedBindParams envIO = do
@@ -351,7 +351,7 @@ testNamedBindParams envIO = do
       Right () <- Direct.bindInt64 stmt barIdx 2
       Row <- step stmt
       1 <- columnCount stmt
-      [SQLInteger 2] <- columns stmt
+      [SqlInteger 2] <- columns stmt
       Done <- step stmt
       return ()
     withStmt conn "SELECT @n1+@n2" $ \stmt -> do
@@ -364,10 +364,10 @@ testNamedBindParams envIO = do
       Nothing <- Direct.bindParameterIndex stmt ":n2"
       return ()
     withStmt conn "SELECT :foo / :bar,:t" $ \stmt -> do
-      bindNamed stmt [(":t", SQLText "txt"), (":foo", SQLInteger 6), (":bar", SQLInteger 2)]
+      bindNamed stmt [(":t", SqlText "txt"), (":foo", SqlInteger 6), (":bar", SqlInteger 2)]
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 3, SQLText "txt"] <- columns stmt
+      [SqlInteger 3, SqlText "txt"] <- columns stmt
       Done <- step stmt
       return ()
 
@@ -392,7 +392,7 @@ testColumns envIO = do
       2 <- columnCount stmt
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 1, SQLInteger 2] <- columns stmt
+      [SqlInteger 1, SqlInteger 2] <- columns stmt
       Done <- step stmt
       2 <- columnCount stmt
       return ()
@@ -403,15 +403,15 @@ testColumns envIO = do
       exec conn "ALTER TABLE foo ADD COLUMN c INT"
       Row <- step stmt
       3 <- columnCount stmt
-      [SQLInteger 1, SQLInteger 2, SQLNull] <- columns stmt
+      [SqlInteger 1, SqlInteger 2, SqlNull] <- columns stmt
       exec conn "ALTER TABLE foo ADD COLUMN d INT NOT NULL DEFAULT 42"
       -- ignored by this prepared statement, now that it has stepped.
       Row <- step stmt
       3 <- columnCount stmt
-      [SQLInteger 3, SQLInteger 4, SQLNull] <- columns stmt
+      [SqlInteger 3, SqlInteger 4, SqlNull] <- columns stmt
       Row <- step stmt
       3 <- columnCount stmt
-      [SQLInteger 5, SQLInteger 6, SQLNull] <- columns stmt
+      [SqlInteger 5, SqlInteger 6, SqlNull] <- columns stmt
       Done <- step stmt
       3 <- columnCount stmt
       reset stmt
@@ -419,7 +419,7 @@ testColumns envIO = do
       -- about the new column.
       Row <- step stmt
       4 <- columnCount stmt -- That's better.
-      [SQLInteger 1, SQLInteger 2, SQLNull, SQLInteger 42] <- columns stmt
+      [SqlInteger 1, SqlInteger 2, SqlNull, SqlInteger 42] <- columns stmt
       return ()
   where
     command stmt = do
@@ -438,20 +438,20 @@ testTypedColumns envIO = do
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 1, SQLInteger 2] <- typedColumns stmt [Nothing, Nothing]
+      [SqlInteger 1, SqlInteger 2] <- typedColumns stmt [Nothing, Nothing]
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 3, SQLInteger 4] <- typedColumns stmt [Just IntegerColumn, Just IntegerColumn]
+      [SqlInteger 3, SqlInteger 4] <- typedColumns stmt [Just IntegerColumn, Just IntegerColumn]
       Done <- step stmt
       2 <- columnCount stmt
       return ()
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLText "1", SQLText "2"] <- typedColumns stmt [Just TextColumn, Just TextColumn]
+      [SqlText "1", SqlText "2"] <- typedColumns stmt [Just TextColumn, Just TextColumn]
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLFloat 3.0, SQLFloat 4.0] <- typedColumns stmt [Just FloatColumn, Just FloatColumn]
+      [SqlFloat 3.0, SqlFloat 4.0] <- typedColumns stmt [Just FloatColumn, Just FloatColumn]
       Done <- step stmt
       2 <- columnCount stmt
       return ()
@@ -485,11 +485,11 @@ testColumnName envIO = do
         checkNames
         Row <- step stmt
         checkNames
-        [SQLInteger 1, SQLText "hello", SQLFloat 3.14, SQLInteger 456] <- columns stmt
+        [SqlInteger 1, SqlText "hello", SqlFloat 3.14, SqlInteger 456] <- columns stmt
         Done <- step stmt
         checkNames
 
-    -- Column names without AS clauses may change in future versions of SQLite.
+    -- Column names without AS clauses may change in future versions of Sqlite.
     -- This test will fail if they do.
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
       4 <- columnCount stmt
@@ -531,49 +531,49 @@ testErrors envIO = do
 
     withStmt conn "SELECT ?" $ \stmt -> do
       forM_ [-1, 0, 2] $ \i -> do
-        expectError ErrorRange $ bindSQLData stmt i $ SQLInteger 42
-        expectError ErrorRange $ bindSQLData stmt i SQLNull
-      bindSQLData stmt 1 $ SQLInteger 42
+        expectError ErrorRange $ bindSqlData stmt i $ SqlInteger 42
+        expectError ErrorRange $ bindSqlData stmt i SqlNull
+      bindSqlData stmt 1 $ SqlInteger 42
       Row <- step stmt
 
-      -- If column index is out of range, it returns SQLNull.
+      -- If column index is out of range, it returns SqlNull.
       -- This may or may not be the desired behavior, but at least we know.
-      SQLNull <- column stmt (-1)
-      SQLNull <- column stmt 1
+      SqlNull <- column stmt (-1)
+      SqlNull <- column stmt 1
 
-      SQLInteger 42 <- column stmt 0
+      SqlInteger 42 <- column stmt 0
       return ()
 
     withStmt conn "SELECT 1" $ \stmt -> do
       forM_ [-1, 0, 1, 2] $ \i -> do
-        expectError ErrorRange $ bindSQLData stmt i $ SQLInteger 42
-        expectError ErrorRange $ bindSQLData stmt i SQLNull
+        expectError ErrorRange $ bindSqlData stmt i $ SqlInteger 42
+        expectError ErrorRange $ bindSqlData stmt i SqlNull
       bind stmt [] -- This should succeed.  Don't whine that there aren't any
       -- parameters to bind!
       Row <- step stmt
-      SQLInteger 1 <- column stmt 0
+      SqlInteger 1 <- column stmt 0
       return ()
 
     withStmt conn "SELECT :bar" $ \stmt -> do
-      shouldFail $ bindNamed stmt [(":missing", SQLInteger 42)]
-      bindNamed stmt [(":bar", SQLInteger 1)]
+      shouldFail $ bindNamed stmt [(":missing", SqlInteger 42)]
+      bindNamed stmt [(":bar", SqlInteger 1)]
       Row <- step stmt
-      SQLInteger 1 <- column stmt 0
+      SqlInteger 1 <- column stmt 0
       return ()
 
     withStmt conn "SELECT ?5" $ \stmt -> do
       forM_ [-1, 0, 6, 7] $ \i -> do
-        expectError ErrorRange $ bindSQLData stmt i $ SQLInteger 42
-        expectError ErrorRange $ bindSQLData stmt i SQLNull
-      bind stmt $ map SQLInteger [1 .. 5]
+        expectError ErrorRange $ bindSqlData stmt i $ SqlInteger 42
+        expectError ErrorRange $ bindSqlData stmt i SqlNull
+      bind stmt $ map SqlInteger [1 .. 5]
       -- This succeeds, even though 1..4 aren't used.
       Row <- step stmt
-      [SQLInteger 5] <- columns stmt
+      [SqlInteger 5] <- columns stmt
       return ()
 
   -- Need to access the database with multiple connections.
   -- "BEGIN; ROLLBACK" causes running statements in the same connection to
-  -- throw SQLITE_ABORT.
+  -- throw SqlITE_ABORT.
   withConnShared $ \conn -> do
     foo123456 conn
     withStmt conn "SELECT * FROM foo" $ \stmt -> do
@@ -584,7 +584,7 @@ testErrors envIO = do
 
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 1, SQLInteger 2] <- columns stmt
+      [SqlInteger 1, SqlInteger 2] <- columns stmt
 
       -- "DROP TABLE foo" should fail, now that the statement is running.
       expectError ErrorLocked $ exec conn "DROP TABLE foo"
@@ -600,10 +600,10 @@ testErrors envIO = do
 
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 3, SQLInteger 4] <- columns stmt
+      [SqlInteger 3, SqlInteger 4] <- columns stmt
       Row <- step stmt
       2 <- columnCount stmt
-      [SQLInteger 5, SQLInteger 6] <- columns stmt
+      [SqlInteger 5, SqlInteger 6] <- columns stmt
 
       expectError ErrorLocked $ exec conn "DROP TABLE foo"
       withConnShared $ \conn ->
@@ -619,16 +619,16 @@ testErrors envIO = do
       Right () <- Direct.reset stmt
 
       -- But trying to 'step' again should fail.
-      Left SQLiteException {sqliteError = err} <- try $ step stmt
+      Left SqliteException {sqliteError = err} <- try $ step stmt
       assertBool
-        "Step after table vanishes should fail with SQLITE_ERROR or SQLITE_SCHEMA"
+        "Step after table vanishes should fail with SqlITE_ERROR or SqlITE_SCHEMA"
         ( err == ErrorError
-            || err == ErrorSchema -- SQLite 3.7.13
-            -- SQLite 3.6.22
+            || err == ErrorSchema -- Sqlite 3.7.13
+            -- Sqlite 3.6.22
         )
   where
     expectError err io = do
-      Left SQLiteException {sqliteError = err'} <- try io
+      Left SqliteException {sqliteError = err'} <- try io
       assertEqual "testErrors: expectError" err err'
 
     foo123456 conn =
@@ -663,15 +663,15 @@ testIntegrity envIO = do
 
               return $ f values values'
 
-        True <- test [SQLInteger 0, SQLFloat 0.0, SQLText T.empty, SQLBlob B.empty, SQLNull]
-        True <- test [SQLInteger minBound, SQLFloat (-1 / 0), SQLText "\0", SQLBlob (B8.pack "\0"), SQLNull]
-        True <- test [SQLInteger maxBound, SQLFloat (1 / 0), SQLText "\1114111", SQLBlob ("\255"), SQLNull]
+        True <- test [SqlInteger 0, SqlFloat 0.0, SqlText T.empty, SqlBlob B.empty, SqlNull]
+        True <- test [SqlInteger minBound, SqlFloat (-1 / 0), SqlText "\0", SqlBlob (B8.pack "\0"), SqlNull]
+        True <- test [SqlInteger maxBound, SqlFloat (1 / 0), SqlText "\1114111", SqlBlob ("\255"), SqlNull]
 
-        -- SQLite3 turns NaN into SQLNull.
+        -- Sqlite3 turns NaN into SqlNull.
         True <-
           testWith
-            (\_old new -> new === [SQLNull, SQLNull, SQLNull, SQLNull, SQLNull])
-            [SQLNull, SQLFloat (0 / 0), SQLNull, SQLNull, SQLNull]
+            (\_old new -> new === [SqlNull, SqlNull, SqlNull, SqlNull, SqlNull])
+            [SqlNull, SqlFloat (0 / 0), SqlNull, SqlNull, SqlNull]
 
         return ()
 
@@ -681,11 +681,11 @@ testDecodeError envIO = do
   withStmt conn "SELECT ?" $ \stmt -> do
     Right () <- Direct.bindText stmt 1 invalidUtf8
     Row <- step stmt
-    Left (DecodeError "Database.SQLite3.columnText: Invalid UTF-8" _) <-
+    Left (DecodeError "Database.Sqlite3.columnText: Invalid UTF-8" _) <-
       try $ column stmt 0
     return ()
 
-  -- Verify the assertion that SQLite3 does not validate UTF-8, by writing the
+  -- Verify the assertion that Sqlite3 does not validate UTF-8, by writing the
   -- data to a table on disk and reading it back.
   withConnShared $ \conn -> do
     exec conn "CREATE TABLE testDecodeError (a TEXT)"
@@ -699,7 +699,7 @@ testDecodeError envIO = do
       TextColumn <- columnType stmt 0
       txt <- Direct.columnText stmt 0
       assertEqual "testDecodeError: Database altered our invalid UTF-8" invalidUtf8 txt
-      Left (DecodeError "Database.SQLite3.columnText: Invalid UTF-8" _) <-
+      Left (DecodeError "Database.Sqlite3.columnText: Invalid UTF-8" _) <-
         try $ columnText stmt 0
       Done <- step stmt
       return ()
@@ -724,7 +724,7 @@ testResultStats envIO = do
     True <- return $ (`notElem` [1, 123, maxBound]) rowid
     exec conn "UPDATE tbl SET rowid=rowid+1 WHERE rowid=1 OR rowid=123"
     (_, 2, 6) <- stats conn
-    Left SQLiteException {sqliteError = ErrorConstraint} <-
+    Left SqliteException {sqliteError = ErrorConstraint} <-
       try $ exec conn "UPDATE tbl SET rowid=4"
     exec conn "DELETE FROM tbl"
     (_, 4, 10) <- stats conn
@@ -787,11 +787,11 @@ testCustomFunction envIO = do
     createFunction conn "repeat" (Just 2) True repeatString
     withStmt conn "SELECT repeat(3,'abc')" $ \stmt -> do
       Row <- step stmt
-      [SQLText "abcabcabc"] <- columns stmt
+      [SqlText "abcabcabc"] <- columns stmt
       Done <- step stmt
       return ()
     deleteFunction conn "repeat" (Just 2)
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT repeat(3,'abc')"
     return ()
   where
@@ -805,7 +805,7 @@ testCustomFunctionError envIO = do
   TestEnv {..} <- envIO
   withConn $ \conn -> do
     createFunction conn "fail" (Just 0) True throwError
-    Left SQLiteException {..} <- try $ exec conn "SELECT fail()"
+    Left SqliteException {..} <- try $ exec conn "SELECT fail()"
     -- Match only the first 13 characters of the error message here.  The
     -- error message coming from the use of "error" nowadays contains
     -- fragments of the callstack and not just the string we gave it.
@@ -824,11 +824,11 @@ testCustomAggragate envIO = do
     createAggregate conn "mysum" (Just 1) 0 mySumStep funcResultInt64
     withStmt conn "SELECT mysum(n) FROM tbl" $ \stmt -> do
       Row <- step stmt
-      [SQLInteger 16] <- columns stmt
+      [SqlInteger 16] <- columns stmt
       Done <- step stmt
       return ()
     deleteFunction conn "mysum" (Just 1)
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT mysum(n) FROM tbl"
     return ()
   where
@@ -845,17 +845,17 @@ testCustomCollation envIO = do
     createCollation conn "len" cmpLen
     withStmt conn "SELECT * FROM tbl ORDER BY n COLLATE len" $ \stmt -> do
       Row <- step stmt
-      [SQLText "ox"] <- columns stmt
+      [SqlText "ox"] <- columns stmt
       Row <- step stmt
-      [SQLText "cat"] <- columns stmt
+      [SqlText "cat"] <- columns stmt
       Row <- step stmt
-      [SQLText "dog"] <- columns stmt
+      [SqlText "dog"] <- columns stmt
       Row <- step stmt
-      [SQLText "mouse"] <- columns stmt
+      [SqlText "mouse"] <- columns stmt
       Done <- step stmt
       return ()
     deleteCollation conn "len"
-    Left SQLiteException {sqliteError = ErrorError} <-
+    Left SqliteException {sqliteError = ErrorError} <-
       try $ exec conn "SELECT * FROM tbl ORDER BY n COLLATE len"
     return ()
   where
@@ -890,7 +890,7 @@ testInterrupt envIO = do
       exec conn "BEGIN"
       forM_ [1 .. 200] $ \i -> do
         reset stmt
-        bind stmt [SQLInteger i]
+        bind stmt [SqlInteger i]
         Done <- step stmt
         return ()
       exec conn "COMMIT"
@@ -913,8 +913,8 @@ testMultiRowInsert envIO = do
     exec conn "CREATE TABLE foo (a INT, b INT)"
     result <- try $ exec conn "INSERT INTO foo VALUES (1,2), (3,4)"
     case result of
-      Left SQLiteException {sqliteError = ErrorError} ->
-        assertFailure "Installed SQLite3 does not support multi-row INSERT via the VALUES clause"
+      Left SqliteException {sqliteError = ErrorError} ->
+        assertFailure "Installed Sqlite3 does not support multi-row INSERT via the VALUES clause"
       Left e ->
         assertFailure $ show e
       Right () -> do
@@ -922,19 +922,19 @@ testMultiRowInsert envIO = do
         2 <- changes conn
         withStmt conn "SELECT * FROM foo" $ \stmt -> do
           Row <- step stmt
-          [SQLInteger 1, SQLInteger 2] <- columns stmt
+          [SqlInteger 1, SqlInteger 2] <- columns stmt
           Row <- step stmt
-          [SQLInteger 3, SQLInteger 4] <- columns stmt
+          [SqlInteger 3, SqlInteger 4] <- columns stmt
           Done <- step stmt
           return ()
 
 testOpenV2CanNotCreate :: IO FilePath -> Assertion
 testOpenV2CanNotCreate filepathIO = do
   filepath <- filepathIO
-  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+  Left SqliteException {sqliteError = ErrorCan'tOpen} <- try do
     db <- openV2 DefaultVFS [] OpenV2ReadOnly (T.pack filepath)
     close db
-  Left SQLiteException {sqliteError = ErrorCan'tOpen} <- try do
+  Left SqliteException {sqliteError = ErrorCan'tOpen} <- try do
     db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
     close db
   do
@@ -947,14 +947,14 @@ testExtendedResultCodes :: IO FilePath -> Assertion
 testExtendedResultCodes filepathIO = do
   filepath <- filepathIO
   db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
-  Left SQLiteException {sqliteError = ErrorConstraint } <- try do
+  Left SqliteException {sqliteError = ErrorConstraint } <- try do
     exec
       db
       "CREATE TABLE test_ercs (t TEXT PRIMARY KEY); \
       \INSERT INTO test_ercs VALUES ('val1'); \
       \INSERT INTO test_ercs VALUES ('val1');"
   db <- openV2 DefaultVFS [OpenV2ExtendedResultCode] OpenV2ReadWrite (T.pack filepath)
-  Left SQLiteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
+  Left SqliteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
     exec
       db
       "CREATE TABLE test_ercs_2 (t TEXT PRIMARY KEY); \

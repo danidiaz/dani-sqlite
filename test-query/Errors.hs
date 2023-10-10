@@ -20,7 +20,7 @@ import           Data.Word
 import Data.Tuple (Solo(..))
 
 import           Common
-import SQLite.Query.Types (Null)
+import Sqlite.Query.Types (Null)
 
 -- The "length (show e) `seq` .." trickery below is to force evaluate
 -- the contents of error messages.  Another option would be to log
@@ -39,7 +39,7 @@ assertFormatErrorCaught action = do
 
 assertSQLErrorCaught :: IO a -> Assertion
 assertSQLErrorCaught action = do
-  catch (action >> return False) (\(e :: SQLiteException) -> length (show e) `seq` return True) >>=
+  catch (action >> return False) (\(e :: SqliteException) -> length (show e) `seq` return True) >>=
     assertBool "assertSQLError exc"
 
 assertOOBCaught :: IO a -> Assertion

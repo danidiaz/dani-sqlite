@@ -3,7 +3,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module SQLite
+module Sqlite
   ( -- * Connection management
     open,
     openV2,
@@ -38,7 +38,7 @@ module SQLite
     -- * Binding values to a prepared statement
 
     -- | <https://www.sqlite.org/c3ref/bind_blob.html>
-    bindSQLData,
+    bindSqlData,
     bind,
     bindNamed,
     bindInt,
@@ -68,7 +68,7 @@ module SQLite
     lastInsertRowId,
     changes,
 
-    -- * Create custom SQL functions
+    -- * Create custom Sql functions
     createFunction,
     createAggregate,
     deleteFunction,
@@ -82,7 +82,7 @@ module SQLite
     funcArgBlob,
 
     -- ** Set the result of a function
-    funcResultSQLData,
+    funcResultSqlData,
     funcResultInt64,
     funcResultDouble,
     funcResultText,
@@ -121,8 +121,8 @@ module SQLite
     -- * Types
     Connection,
     PreparedStatement,
-    SQLData (..),
-    SQLiteException (..),
+    SqlData (..),
+    SqliteException (..),
     ColumnType (..),
     FuncContext,
     FuncArgs,
@@ -143,7 +143,7 @@ module SQLite
   )
 where
 
--- Re-exported from Database.SQLite3.Direct without modification.
+-- Re-exported from Database.Sqlite3.Direct without modification.
 -- Note that if this module were in another package, source links would not
 -- be generated for these functions.
 
@@ -159,7 +159,7 @@ import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
 import Data.Typeable
-import SQLite.Direct
+import Sqlite.Direct
   ( OpenV2Flag (..),
     OpenV2Mode (..),
     ArgCount (..),
@@ -203,22 +203,22 @@ import SQLite.Direct
     interrupt,
     lastInsertRowId,
   )
-import SQLite.Direct qualified as Direct
+import Sqlite.Direct qualified as Direct
 import Foreign.Ptr (Ptr)
 import Prelude hiding (error)
 
-data SQLData
-  = SQLInteger !Int64
-  | SQLFloat !Double
-  | SQLText !Text
-  | SQLBlob !ByteString
-  | SQLNull
+data SqlData
+  = SqlInteger !Int64
+  | SqlFloat !Double
+  | SqlText !Text
+  | SqlBlob !ByteString
+  | SqlNull
   deriving (Eq, Show, Typeable)
 
--- | Exception thrown when SQLite3 reports an error.
+-- | Exception thrown when Sqlite3 reports an error.
 --
 -- direct-sqlite may throw other types of exceptions if you misuse the API.
-data SQLiteException = SQLiteException
+data SqliteException = SqliteException
   { -- | Error code returned by API call
     sqliteError :: !Error,
     -- | Text describing the error
@@ -229,20 +229,20 @@ data SQLiteException = SQLiteException
   }
   deriving (Eq, Typeable)
 
--- NB: SQLiteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
+-- NB: SqliteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
 -- to defer message construction in the case where a user catches and
 -- immediately handles the error.
 
-instance Show SQLiteException where
+instance Show SqliteException where
   show
-    SQLiteException
+    SqliteException
       { sqliteError = code,
         sqliteErrorDetails = details,
         sqliteErrorContext = context
       } =
       T.unpack $
         T.concat
-          [ "SQLite3 returned ",
+          [ "Sqlite3 returned ",
             T.pack $ show code,
             " while attempting to perform ",
             context,
@@ -250,7 +250,7 @@ instance Show SQLiteException where
             details
           ]
 
-instance Exception SQLiteException
+instance Exception SqliteException
 
 -- | Like 'decodeUtf8', but substitute a custom error message if
 -- decoding fails.
@@ -279,22 +279,22 @@ renderDetailSource src = case src of
   DetailMessage msg ->
     return msg
 
-throwSQLiteException :: DetailSource -> Text -> Error -> IO a
-throwSQLiteException detailSource context error = do
+throwSqliteException :: DetailSource -> Text -> Error -> IO a
+throwSqliteException detailSource context error = do
   Utf8 details <- renderDetailSource detailSource
   throwIO
-    SQLiteException
+    SqliteException
       { sqliteError = error,
         sqliteErrorDetails = decodeUtf8With lenientDecode details,
         sqliteErrorContext = context
       }
 
 checkError :: DetailSource -> Text -> Either Error a -> IO a
-checkError ds fn = either (throwSQLiteException ds fn) return
+checkError ds fn = either (throwSqliteException ds fn) return
 
 checkErrorMsg :: Text -> Either (Error, Utf8) a -> IO a
 checkErrorMsg fn result = case result of
-  Left (err, msg) -> throwSQLiteException (DetailMessage msg) fn err
+  Left (err, msg) -> throwSqliteException (DetailMessage msg) fn err
   Right a -> return a
 
 appendShow :: Show a => Text -> a -> Text
@@ -354,7 +354,7 @@ interruptibly db io
                   -- the operation will dangle in the background, which could
                   -- be really bad if it uses locally-allocated resources.
                   uninterruptibleMask_ $ do
-                      -- Tell SQLite3 to interrupt the current query.
+                      -- Tell Sqlite3 to interrupt the current query.
                       interrupt db
 
                       -- Interrupt the thread in case it's blocked for some
@@ -376,7 +376,7 @@ interruptibly db io
     try' :: IO a -> IO (Either SomeException a)
     try' = try
 
--- | Execute zero or more SQL statements delimited by semicolons.
+-- | Execute zero or more Sql statements delimited by semicolons.
 exec :: Connection -> Text -> IO ()
 exec db sql =
   Direct.exec db (toUtf8 sql)
@@ -407,7 +407,7 @@ execWithCallback db sql cb =
           {-# NOINLINE names #-}
        in cb count names . map (fmap fromUtf8'')
 
-    fromUtf8'' = fromUtf8' "Database.SQLite3.execWithCallback: Invalid UTF-8"
+    fromUtf8'' = fromUtf8' "Database.Sqlite3.execWithCallback: Invalid UTF-8"
 
 type ExecCallback =
   -- | Number of columns, which is the number of items in
@@ -426,7 +426,7 @@ type ExecCallback =
 -- Unlike 'exec', 'prepare' only executes the first statement, and ignores
 -- subsequent statements.
 --
--- If the query string contains no SQL statements, this 'fail's.
+-- If the query string contains no Sql statements, this 'fail's.
 prepare :: Connection -> Text -> IO PreparedStatement
 prepare db sql = prepareUtf8 db (toUtf8 sql)
 
@@ -435,14 +435,14 @@ prepare db sql = prepareUtf8 db (toUtf8 sql)
 -- It can help to avoid redundant Utf8 to Text conversion if you already
 -- have Utf8
 --
--- If the query string contains no SQL statements, this 'fail's.
+-- If the query string contains no Sql statements, this 'fail's.
 prepareUtf8 :: Connection -> Utf8 -> IO PreparedStatement
 prepareUtf8 db sql = do
   m <-
     Direct.prepare db sql
       >>= checkError (DetailConnection db) ("prepare " `appendShow` sql)
   case m of
-    Nothing -> fail "Direct.SQLite3.prepare: empty query string"
+    Nothing -> fail "Direct.Sqlite3.prepare: empty query string"
     Just stmt -> return stmt
 
 -- | <https://www.sqlite.org/c3ref/step.html>
@@ -453,7 +453,7 @@ step statement =
 -- | <https://www.sqlite.org/c3ref/step.html>
 --
 -- Faster step for statements that don't callback to Haskell
--- functions (e.g. by using custom SQL functions).
+-- functions (e.g. by using custom Sql functions).
 stepNoCB :: PreparedStatement -> IO StepResult
 stepNoCB statement =
   Direct.stepNoCB statement >>= checkError (DetailStatement statement) "stepNoCB"
@@ -466,7 +466,7 @@ stepNoCB statement =
 -- discard the error.  Otherwise, we would get "double jeopardy".
 -- For example:
 --
---  ok <- try $ step stmt :: IO (Either SQLiteException StepResult)
+--  ok <- try $ step stmt :: IO (Either SqliteException StepResult)
 --  finalize stmt
 --
 -- If 'finalize' threw its error, it would throw the exception the user was
@@ -498,7 +498,7 @@ finalize statement = do
 
 -- | <https://www.sqlite.org/c3ref/bind_parameter_name.html>
 --
--- Return the N-th SQL parameter name.
+-- Return the N-th Sql parameter name.
 --
 -- Named parameters are returned as-is.  E.g. \":v\" is returned as
 -- @Just \":v\"@.  Unnamed parameters, however, are converted to
@@ -512,7 +512,7 @@ bindParameterName stmt idx = do
     Nothing -> return Nothing
     Just name -> Just <$> fromUtf8 desc name
   where
-    desc = "Database.SQLite3.bindParameterName: Invalid UTF-8"
+    desc = "Database.Sqlite3.bindParameterName: Invalid UTF-8"
 
 -- | <https://www.sqlite.org/c3ref/column_name.html>
 --
@@ -531,9 +531,9 @@ columnName stmt idx = do
         then throwIO outOfMemory
         else return Nothing
   where
-    desc = "Database.SQLite3.columnName: Invalid UTF-8"
+    desc = "Database.Sqlite3.columnName: Invalid UTF-8"
     outOfMemory =
-      SQLiteException
+      SqliteException
         { sqliteError = ErrorNoMemory,
           sqliteErrorDetails = "out of memory (sqlite3_column_name returned NULL)",
           sqliteErrorContext = "column name"
@@ -584,24 +584,24 @@ bindText statement parameterIndex text =
 -- Example:
 --
 -- >> stmt <- prepare conn "SELECT ?1, ?3, ?5"
--- >> bindSQLData stmt 1 (SQLInteger 1)
--- >> bindSQLData stmt 2 (SQLInteger 2)
--- >> bindSQLData stmt 6 (SQLInteger 6)
--- >*** Exception: SQLite3 returned ErrorRange while attempting to perform bind int64.
+-- >> bindSqlData stmt 1 (SqlInteger 1)
+-- >> bindSqlData stmt 2 (SqlInteger 2)
+-- >> bindSqlData stmt 6 (SqlInteger 6)
+-- >*** Exception: Sqlite3 returned ErrorRange while attempting to perform bind int64.
 -- >> step stmt >> columns stmt
--- >[SQLInteger 1,SQLNull,SQLNull]
-bindSQLData :: PreparedStatement -> ParamIndex -> SQLData -> IO ()
-bindSQLData statement idx datum =
+-- >[SqlInteger 1,SqlNull,SqlNull]
+bindSqlData :: PreparedStatement -> ParamIndex -> SqlData -> IO ()
+bindSqlData statement idx datum =
   case datum of
-    SQLInteger v -> bindInt64 statement idx v
-    SQLFloat v -> bindDouble statement idx v
-    SQLText v -> bindText statement idx v
-    SQLBlob v -> bindBlob statement idx v
-    SQLNull -> bindNull statement idx
+    SqlInteger v -> bindInt64 statement idx v
+    SqlFloat v -> bindDouble statement idx v
+    SqlText v -> bindText statement idx v
+    SqlBlob v -> bindBlob statement idx v
+    SqlNull -> bindNull statement idx
 
 -- | Convenience function for binding values to all parameters.  This will
 -- 'fail' if the list has the wrong number of parameters.
-bind :: PreparedStatement -> [SQLData] -> IO ()
+bind :: PreparedStatement -> [SqlData] -> IO ()
 bind statement sqlData = do
   ParamIndex nParams <- bindParameterCount statement
   when (nParams /= length sqlData) $
@@ -613,7 +613,7 @@ bind statement sqlData = do
           ++ show (length sqlData)
           ++ " given"
       )
-  zipWithM_ (bindSQLData statement) [1 ..] sqlData
+  zipWithM_ (bindSqlData statement) [1 ..] sqlData
 
 -- | Convenience function for binding named values to all parameters.
 -- This will 'fail' if the list has the wrong number of parameters or
@@ -623,9 +623,9 @@ bind statement sqlData = do
 --
 -- @
 -- stmt <- prepare conn \"SELECT :foo + :bar\"
--- bindNamed stmt [(\":foo\", SQLInteger 1), (\":bar\", SQLInteger 2)]
+-- bindNamed stmt [(\":foo\", SqlInteger 1), (\":bar\", SqlInteger 2)]
 -- @
-bindNamed :: PreparedStatement -> [(T.Text, SQLData)] -> IO ()
+bindNamed :: PreparedStatement -> [(T.Text, SqlData)] -> IO ()
 bindNamed statement params = do
   ParamIndex nParams <- bindParameterCount statement
   when (nParams /= length params) $
@@ -643,41 +643,41 @@ bindNamed statement params = do
       idx <- Direct.bindParameterIndex statement $ toUtf8 name
       case idx of
         Just i ->
-          bindSQLData statement i val
+          bindSqlData statement i val
         Nothing ->
           fail ("unknown named parameter " ++ show name)
 
 -- | This will throw a 'DecodeError' if the datum contains invalid UTF-8.
 -- If this behavior is undesirable, you can use 'Direct.columnText' from
--- "Database.SQLite3.Direct", which does not perform conversion to 'Text'.
+-- "Database.Sqlite3.Direct", which does not perform conversion to 'Text'.
 columnText :: PreparedStatement -> ColumnIndex -> IO Text
 columnText statement columnIndex =
   Direct.columnText statement columnIndex
-    >>= fromUtf8 "Database.SQLite3.columnText: Invalid UTF-8"
+    >>= fromUtf8 "Database.Sqlite3.columnText: Invalid UTF-8"
 
-column :: PreparedStatement -> ColumnIndex -> IO SQLData
+column :: PreparedStatement -> ColumnIndex -> IO SqlData
 column statement idx = do
   theType <- columnType statement idx
   typedColumn theType statement idx
 
-columns :: PreparedStatement -> IO [SQLData]
+columns :: PreparedStatement -> IO [SqlData]
 columns statement = do
   count <- columnCount statement
   mapM (column statement) [0 .. count -1]
 
-typedColumn :: ColumnType -> PreparedStatement -> ColumnIndex -> IO SQLData
+typedColumn :: ColumnType -> PreparedStatement -> ColumnIndex -> IO SqlData
 typedColumn theType statement idx = case theType of
-  IntegerColumn -> SQLInteger <$> columnInt64 statement idx
-  FloatColumn -> SQLFloat <$> columnDouble statement idx
-  TextColumn -> SQLText <$> columnText statement idx
-  BlobColumn -> SQLBlob <$> columnBlob statement idx
-  NullColumn -> return SQLNull
+  IntegerColumn -> SqlInteger <$> columnInt64 statement idx
+  FloatColumn -> SqlFloat <$> columnDouble statement idx
+  TextColumn -> SqlText <$> columnText statement idx
+  BlobColumn -> SqlBlob <$> columnBlob statement idx
+  NullColumn -> return SqlNull
 
 -- | This avoids extra API calls using the list of column types.
 -- If passed types do not correspond to the actual types, the values will be
 -- converted according to the rules at <https://www.sqlite.org/c3ref/column_blob.html>.
 -- If the list contains more items that number of columns, the result is undefined.
-typedColumns :: PreparedStatement -> [Maybe ColumnType] -> IO [SQLData]
+typedColumns :: PreparedStatement -> [Maybe ColumnType] -> IO [SqlData]
 typedColumns statement = zipWithM f [0 ..]
   where
     f idx theType = case theType of
@@ -686,7 +686,7 @@ typedColumns statement = zipWithM f [0 ..]
 
 -- | <https://sqlite.org/c3ref/create_function.html>
 --
--- Create a custom SQL function or redefine the behavior of an existing
+-- Create a custom Sql function or redefine the behavior of an existing
 -- function. If the function is deterministic, i.e. if it always returns the
 -- same result given the same input, you can set the boolean flag to let
 -- @sqlite@ perform additional optimizations.
@@ -726,7 +726,7 @@ createAggregate db name nArgs initSt xStep xFinal =
   Direct.createAggregate db (toUtf8 name) nArgs initSt xStep xFinal
     >>= checkError (DetailConnection db) ("createAggregate " `appendShow` name)
 
--- | Delete an SQL function (scalar or aggregate).
+-- | Delete an Sql function (scalar or aggregate).
 deleteFunction :: Connection -> Text -> Maybe ArgCount -> IO ()
 deleteFunction db name nArgs =
   Direct.deleteFunction db (toUtf8 name) nArgs
@@ -735,16 +735,16 @@ deleteFunction db name nArgs =
 funcArgText :: FuncArgs -> ArgIndex -> IO Text
 funcArgText args argIndex =
   Direct.funcArgText args argIndex
-    >>= fromUtf8 "Database.SQLite3.funcArgText: Invalid UTF-8"
+    >>= fromUtf8 "Database.Sqlite3.funcArgText: Invalid UTF-8"
 
-funcResultSQLData :: FuncContext -> SQLData -> IO ()
-funcResultSQLData ctx datum =
+funcResultSqlData :: FuncContext -> SqlData -> IO ()
+funcResultSqlData ctx datum =
   case datum of
-    SQLInteger v -> funcResultInt64 ctx v
-    SQLFloat v -> funcResultDouble ctx v
-    SQLText v -> funcResultText ctx v
-    SQLBlob v -> funcResultBlob ctx v
-    SQLNull -> funcResultNull ctx
+    SqlInteger v -> funcResultInt64 ctx v
+    SqlFloat v -> funcResultDouble ctx v
+    SqlText v -> funcResultText ctx v
+    SqlBlob v -> funcResultBlob ctx v
+    SqlNull -> funcResultNull ctx
 
 funcResultText :: FuncContext -> Text -> IO ()
 funcResultText ctx value =

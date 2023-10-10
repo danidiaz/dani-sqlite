@@ -5,7 +5,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE BlockArguments #-}
-module SQLite.Types (
+module Sqlite.Types (
     -- * Objects
     -- | <https://www.sqlite.org/c3ref/objlist.html>
     CConnection,

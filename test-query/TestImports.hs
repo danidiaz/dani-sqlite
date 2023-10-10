@@ -7,7 +7,7 @@ module TestImports (
 import qualified Data.Text as T
 
 import           Common
-import           SQLite
+import           Sqlite
 import Data.Tuple (Solo(..))
 import Control.Exception
 

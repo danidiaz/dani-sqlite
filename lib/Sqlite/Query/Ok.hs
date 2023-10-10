@@ -3,7 +3,7 @@
 
 ------------------------------------------------------------------------------
 -- |
--- Module:     Database.SQLite.Simple.Ok
+-- Module:     Database.Sqlite.Simple.Ok
 -- Copyright:  (c) 2012 Leon P Smith
 --             (c) 2012-2013 Janne Hellsten
 -- License:    BSD3
@@ -27,7 +27,7 @@
 --
 ------------------------------------------------------------------------------
 
-module SQLite.Query.Ok where
+module Sqlite.Query.Ok where
 
 import Control.Applicative
 import Control.Exception

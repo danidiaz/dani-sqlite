@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE CApiFFI #-}
-module SQLite.Bindings (
-    module SQLite.Types,
+module Sqlite.Bindings (
+    module Sqlite.Types,
 
     -- * Connection management
     c_sqlite3_open,
@@ -129,7 +129,7 @@ module SQLite.Bindings (
     c_sqlite3_backup_pagecount,
 ) where
 
-import SQLite.Types
+import Sqlite.Types
 
 import Foreign
 import Foreign.C

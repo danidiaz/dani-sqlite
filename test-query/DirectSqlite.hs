@@ -8,7 +8,7 @@ module DirectSqlite (
 import Common
 
 import Control.Exception (bracket)
-import qualified SQLite as DS
+import qualified Sqlite as DS
 import Data.Tuple (Solo(..))
 
 testDirectSqlite :: TestEnv -> Test
@@ -21,4 +21,4 @@ testDirectSqlite TestEnv{..} = TestCase $ do
     testDirect stmt = do
       DS.Row <- DS.step stmt
       res <- DS.column stmt 0
-      assertEqual "1+1" (SQLInteger 2) res
+      assertEqual "1+1" (SqlInteger 2) res

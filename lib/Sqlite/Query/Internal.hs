@@ -7,7 +7,7 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.SQLite.Simple.Internal
+-- Module:      Database.Sqlite.Simple.Internal
 -- Copyright:   (c) 2011-2012 Leon P Smith
 --              (c) 2012-2013 Janne Hellsten
 -- License:     BSD3
@@ -20,7 +20,7 @@
 -- does not.  Also, at the moment there are things in here that aren't
 -- particularly internal and are exported elsewhere;  these will eventually
 -- disappear from this module.
-module SQLite.Query.Internal where
+module Sqlite.Query.Internal where
 
 import Control.Applicative
 import Control.Exception (Exception)
@@ -32,8 +32,8 @@ import Data.ByteString.Char8 ()
 import Data.IORef
 import Data.Typeable (Typeable)
 import Data.Word
-import SQLite.Query.Ok
-import qualified SQLite as Base
+import Sqlite.Query.Ok
+import qualified Sqlite as Base
 
 -- -- | Connection to an open database.
 -- --
@@ -55,7 +55,7 @@ instance Exception ColumnOutOfBounds
 
 -- | A Field represents metadata about a particular field
 data Field = Field
-  { result :: Base.SQLData,
+  { result :: Base.SqlData,
     column :: {-# UNPACK #-} !Int
   }
 
@@ -63,12 +63,12 @@ data Field = Field
 -- it easier to make sense out of types in FromRow.
 newtype RowParseRO = RowParseRO {nColumns :: Int}
 
-newtype RowParser a = RP {unRP :: ReaderT RowParseRO (StateT (Int, [Base.SQLData]) Ok) a}
+newtype RowParser a = RP {unRP :: ReaderT RowParseRO (StateT (Int, [Base.SqlData]) Ok) a}
   deriving (Functor, Applicative, Alternative, Monad, MonadPlus)
 
-gettypename :: Base.SQLData -> ByteString
-gettypename (Base.SQLInteger _) = "INTEGER"
-gettypename (Base.SQLFloat _) = "FLOAT"
-gettypename (Base.SQLText _) = "TEXT"
-gettypename (Base.SQLBlob _) = "BLOB"
-gettypename Base.SQLNull = "NULL"
+gettypename :: Base.SqlData -> ByteString
+gettypename (Base.SqlInteger _) = "INTEGER"
+gettypename (Base.SqlFloat _) = "FLOAT"
+gettypename (Base.SqlText _) = "TEXT"
+gettypename (Base.SqlBlob _) = "BLOB"
+gettypename Base.SqlNull = "NULL"
