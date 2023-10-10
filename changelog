@@ -1,3 +1,5 @@
+SQL -> Sql
+
 Use the same PreparedStatement and ColumnIndex types in SQLite and SQLite.Query.
 
 Statement renamed to PreparedStatement
