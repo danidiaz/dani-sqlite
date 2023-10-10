@@ -1,10 +1,13 @@
-{-# LANGUAGE 
-            OverloadedStrings,
-            ScopedTypeVariables, 
-            ImportQualifiedPost,
-            GADTs #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
 -- |
 -- Module:      Database.Sqlite.Simple
 -- Copyright:   (c) 2011 MailRank, Inc.
@@ -13,11 +16,8 @@
 -- License:     BSD3
 -- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
 -- Portability: portable
---
-------------------------------------------------------------------------------
-
-module Sqlite.Query (
-    -- ** Examples of use
+module Sqlite.Query
+  ( -- ** Examples of use
     -- $use
 
     -- ** The Query type
@@ -46,81 +46,86 @@ module Sqlite.Query (
 
     -- ** Type conversions
     -- $types
+    Query (..),
+    Connection (..),
+    ToRow (..),
+    FromRow (..),
+    Solo (..),
+    (:.) (..),
+    SqlData (..),
+    PreparedStatement,
+    ColumnIndex (..),
+    NamedParam (..),
 
-    Query(..)
-  , Connection(..)
-  , ToRow(..)
-  , FromRow(..)
-  , Solo(..)
-  , (:.)(..)
-  , SqlData(..)
-  , PreparedStatement
-  , ColumnIndex (..)
-  , NamedParam(..)
     -- * Queries that return results
-  , query
-  , query_
-  , queryWith
-  , queryWith_
-  , queryNamed
-  , lastInsertRowId
-  , changes
-  , totalChanges
-    -- * Queries that stream results
-  , fold
-  , fold_
-  , foldNamed
-    -- * Statements that do not return results
-  , execute
-  , execute_
-  , executeMany
-  , executeNamed
-  , field
-    -- * Transactions
-  , withTransaction
-  , withImmediateTransaction
-  , withExclusiveTransaction
-    -- * Low-level statement API for stream access and prepared statements
-  , openStatement
-  , closeStatement
-  , withStatement
-  , bind
-  , bindNamed
-  , reset
-  , columnName
-  , columnCount
-  , withBind
-  , nextRow
-    -- ** Exceptions
-  , FormatError(..)
-  , ResultError(..)
-  , Sqlite.SqliteException(..)
-  , Sqlite.Error(..)
-  ) where
+    query,
+    query_,
+    queryWith,
+    queryWith_,
+    queryNamed,
+    lastInsertRowId,
+    changes,
+    totalChanges,
 
-import           Control.Exception
-import           Control.Monad (void, when, forM_)
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.State.Strict
-import           Data.Int (Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
-import           Data.Typeable (Typeable)
-import           Sqlite.Query.Types
-import Sqlite (PreparedStatement, ColumnIndex, SqlData)
+    -- * Queries that stream results
+    fold,
+    fold_,
+    foldNamed,
+
+    -- * Statements that do not return results
+    execute,
+    execute_,
+    executeMany,
+    executeNamed,
+    field,
+
+    -- * Transactions
+    withTransaction,
+    withImmediateTransaction,
+    withExclusiveTransaction,
+
+    -- * Low-level statement API for stream access and prepared statements
+    openStatement,
+    closeStatement,
+    withStatement,
+    bind,
+    bindNamed,
+    reset,
+    columnName,
+    columnCount,
+    withBind,
+    nextRow,
+
+    -- ** Exceptions
+    FormatError (..),
+    ResultError (..),
+    Sqlite.SqliteException (..),
+    Sqlite.Error (..),
+  )
+where
+
+import Control.Exception
+import Control.Monad (forM_, void, when)
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.State.Strict
+import Data.Int (Int64)
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
+import Data.Typeable (Typeable)
+import Sqlite (ColumnIndex, PreparedStatement, SqlData)
 import Sqlite qualified
 import Sqlite.Direct (Connection)
-import Sqlite.Direct qualified 
-
-import           Sqlite.Query.FromField (ResultError(..))
-import           Sqlite.Query.FromRow
-import           Sqlite.Query.Internal
-import           Sqlite.Query.Ok
-import           Sqlite.Query.ToField (ToField(..))
-import           Sqlite.Query.ToRow (ToRow(..))
+import Sqlite.Direct qualified
+import Sqlite.Query.FromField (ResultError (..))
+import Sqlite.Query.FromRow
+import Sqlite.Query.Internal
+import Sqlite.Query.Ok
+import Sqlite.Query.ToField (ToField (..))
+import Sqlite.Query.ToRow (ToRow (..))
+import Sqlite.Query.Types
 
 data NamedParam where
-    (:=) :: (ToField v) => T.Text -> v -> NamedParam
+  (:=) :: (ToField v) => T.Text -> v -> NamedParam
 
 data TransactionType
   = Deferred
@@ -136,11 +141,12 @@ instance Show NamedParam where
 -- | Exception thrown if a 'Query' was malformed.
 -- This may occur if the number of \'@?@\' characters in the query
 -- string does not match the number of parameters provided.
-data FormatError = FormatError {
-      fmtMessage :: String
-    , fmtQuery   :: Query
-    , fmtParams  :: [String]
-    } deriving (Eq, Show, Typeable)
+data FormatError = FormatError
+  { fmtMessage :: String,
+    fmtQuery :: Query,
+    fmtParams :: [String]
+  }
+  deriving (Eq, Show, Typeable)
 
 instance Exception FormatError
 
@@ -155,20 +161,29 @@ bind stmt params = do
   let qp = toRow params
   stmtParamCount <- Sqlite.bindParameterCount stmt
   when (length qp /= fromIntegral stmtParamCount) (throwColumnMismatch qp stmtParamCount)
-  mapM_ (errorCheckParamName qp) [1..stmtParamCount]
+  mapM_ (errorCheckParamName qp) [1 .. stmtParamCount]
   Sqlite.bind stmt qp
   where
     throwColumnMismatch qp nParams = do
       templ <- getQuery stmt
-      fmtError ("Sql query contains " ++ show nParams ++ " params, but " ++
-                show (length qp) ++ " arguments given") templ qp
+      fmtError
+        ( "Sql query contains "
+            ++ show nParams
+            ++ " params, but "
+            ++ show (length qp)
+            ++ " arguments given"
+        )
+        templ
+        qp
     errorCheckParamName qp paramNdx = do
       templ <- getQuery stmt
       name <- Sqlite.bindParameterName stmt paramNdx
       case name of
         Just n ->
-          fmtError ("Only unnamed '?' query parameters are accepted, '"++T.unpack n++"' given")
-                    templ qp
+          fmtError
+            ("Only unnamed '?' query parameters are accepted, '" ++ T.unpack n ++ "' given")
+            templ
+            qp
         Nothing -> return $! ()
 
 -- | Binds named parameters to a prepared statement.
@@ -179,26 +194,37 @@ bindNamed stmt params = do
   bind stmt params
   where
     bind stmt params =
-      mapM_ (\(n := v) -> do
-              idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
-              case idx of
-                Just i ->
-                  Sqlite.bindSqlData stmt i (toField v)
-                Nothing -> do
-                  templ <- getQuery stmt
-                  fmtError ("Unknown named parameter '" ++ T.unpack n ++ "'")
-                    templ params)
-            params
+      mapM_
+        ( \(n := v) -> do
+            idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
+            case idx of
+              Just i ->
+                Sqlite.bindSqlData stmt i (toField v)
+              Nothing -> do
+                templ <- getQuery stmt
+                fmtError
+                  ("Unknown named parameter '" ++ T.unpack n ++ "'")
+                  templ
+                  params
+        )
+        params
 
     throwColumnMismatch nParams = do
       templ <- getQuery stmt
-      fmtError ("Sql query contains " ++ show nParams ++ " params, but " ++
-                show (length params) ++ " arguments given") templ params
+      fmtError
+        ( "Sql query contains "
+            ++ show nParams
+            ++ " params, but "
+            ++ show (length params)
+            ++ " arguments given"
+        )
+        templ
+        params
 
 -- | Resets a statement. This does not reset bound parameters, if any, but
 -- allows the statement to be reexecuted again by invoking 'nextRow'.
 reset :: PreparedStatement -> IO ()
-reset  stmt = Sqlite.reset stmt
+reset stmt = Sqlite.reset stmt
 
 -- | Return the name of a a particular column in the result set of a
 -- 'PreparedStatement'.  Throws an 'ArrayException' if the colum index is out
@@ -206,15 +232,15 @@ reset  stmt = Sqlite.reset stmt
 --
 -- <http://www.sqlite.org/c3ref/column_name.html>
 columnName :: PreparedStatement -> ColumnIndex -> IO T.Text
-columnName  stmt n = Sqlite.Direct.columnName stmt n >>= takeUtf8
+columnName stmt n = Sqlite.Direct.columnName stmt n >>= takeUtf8
   where
     takeUtf8 (Just s) = return $ unUtf8 s
-    takeUtf8 Nothing  =
+    takeUtf8 Nothing =
       throwIO (IndexOutOfBounds ("Column index " ++ show n ++ " out of bounds"))
 
 -- | Return number of columns in the query
 columnCount :: PreparedStatement -> IO ColumnIndex
-columnCount  stmt = Sqlite.Direct.columnCount stmt
+columnCount stmt = Sqlite.Direct.columnCount stmt
 
 -- | Binds parameters to a prepared statement, and 'reset's the statement when
 -- the callback completes, even in the presence of exceptions.
@@ -240,7 +266,7 @@ openStatement conn (Query t) = do
 
 -- | Closes a prepared statement.
 closeStatement :: PreparedStatement -> IO ()
-closeStatement  stmt = Sqlite.finalize stmt
+closeStatement stmt = Sqlite.finalize stmt
 
 -- | Opens a prepared statement, executes an action using this statement, and
 -- closes the statement, even in the presence of exceptions.
@@ -248,12 +274,13 @@ withStatement :: Connection -> Query -> (PreparedStatement -> IO a) -> IO a
 withStatement conn query = bracket (openStatement conn query) closeStatement
 
 -- A version of 'withStatement' which binds parameters.
-withStatementParams :: (ToRow params)
-                       => Connection
-                       -> Query
-                       -> params
-                       -> (PreparedStatement -> IO a)
-                       -> IO a
+withStatementParams ::
+  (ToRow params) =>
+  Connection ->
+  Query ->
+  params ->
+  (PreparedStatement -> IO a) ->
+  IO a
 withStatementParams conn template params action =
   withStatement conn template $ \stmt ->
     -- Don't use withBind here, there is no need to reset the parameters since
@@ -261,11 +288,12 @@ withStatementParams conn template params action =
     bind stmt (toRow params) >> action stmt
 
 -- A version of 'withStatement' which binds named parameters.
-withStatementNamedParams :: Connection
-                         -> Query
-                         -> [NamedParam]
-                         -> (PreparedStatement -> IO a)
-                         -> IO a
+withStatementNamedParams ::
+  Connection ->
+  Query ->
+  [NamedParam] ->
+  (PreparedStatement -> IO a) ->
+  IO a
 withStatementNamedParams conn template namedParams action =
   withStatement conn template $ \stmt -> bindNamed stmt namedParams >> action stmt
 
@@ -282,12 +310,13 @@ execute conn template qs =
 -- expected to return results.
 --
 -- Throws 'FormatError' if the query could not be formatted correctly.
-executeMany :: ToRow q => Connection -> Query -> [q] -> IO ()
+executeMany :: (ToRow q) => Connection -> Query -> [q] -> IO ()
 executeMany conn template paramRows = withStatement conn template $ \stmt -> do
   forM_ paramRows $ \params ->
-    withBind stmt params
+    withBind
+      stmt
+      params
       (void . Sqlite.step $ stmt)
-
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
@@ -305,8 +334,12 @@ doFoldToList fromRow_ stmt =
 -- * 'FormatError': the query string mismatched with given arguments.
 --
 -- * 'ResultError': result conversion failed.
-query :: (ToRow q, FromRow r)
-         => Connection -> Query -> q -> IO [r]
+query ::
+  (ToRow q, FromRow r) =>
+  Connection ->
+  Query ->
+  q ->
+  IO [r]
 query = queryWith fromRow
 
 -- | A version of 'query' that does not perform query substitution.
@@ -361,59 +394,62 @@ executeNamed conn template params =
 -- * 'FormatError': the query string mismatched with given arguments.
 --
 -- * 'ResultError': result conversion failed.
-fold :: ( FromRow row, ToRow params )
-        => Connection
-        -> Query
-        -> params
-        -> a
-        -> (a -> row -> IO a)
-        -> IO a
+fold ::
+  (FromRow row, ToRow params) =>
+  Connection ->
+  Query ->
+  params ->
+  a ->
+  (a -> row -> IO a) ->
+  IO a
 fold conn query params initalState action =
   withStatementParams conn query params $ \stmt ->
     doFold fromRow stmt initalState action
 
 -- | A version of 'fold' which does not perform parameter substitution.
-fold_ :: ( FromRow row )
-        => Connection
-        -> Query
-        -> a
-        -> (a -> row -> IO a)
-        -> IO a
+fold_ ::
+  (FromRow row) =>
+  Connection ->
+  Query ->
+  a ->
+  (a -> row -> IO a) ->
+  IO a
 fold_ conn query initalState action =
   withStatement conn query $ \stmt ->
     doFold fromRow stmt initalState action
 
 -- | A version of 'fold' where the query parameters (placeholders) are
 -- named.
-foldNamed :: ( FromRow row )
-          => Connection
-          -> Query
-          -> [NamedParam]
-          -> a
-          -> (a -> row -> IO a)
-          -> IO a
+foldNamed ::
+  (FromRow row) =>
+  Connection ->
+  Query ->
+  [NamedParam] ->
+  a ->
+  (a -> row -> IO a) ->
+  IO a
 foldNamed conn query params initalState action =
   withStatementNamedParams conn query params $ \stmt ->
     doFold fromRow stmt initalState action
 
-doFold :: RowParser row -> PreparedStatement ->  a -> (a -> row -> IO a) -> IO a
+doFold :: RowParser row -> PreparedStatement -> a -> (a -> row -> IO a) -> IO a
 doFold fromRow_ stmt initState action =
   loop initState
   where
     loop val = do
       maybeNextRow <- nextRowWith fromRow_ stmt
       case maybeNextRow of
-        Just row  -> do
+        Just row -> do
           val' <- action val row
           val' `seq` loop val'
-        Nothing   -> return val
+        Nothing -> return val
 
 -- | Extracts the next row from the prepared statement.
 nextRow :: (FromRow r) => PreparedStatement -> IO (Maybe r)
 nextRow = nextRowWith fromRow
 
 nextRowWith :: RowParser r -> PreparedStatement -> IO (Maybe r)
-nextRowWith fromRow_  stmt = do
+nextRowWith fromRow_ stmt = do
   statRes <- Sqlite.step stmt
   case statRes of
     Sqlite.Row -> do
@@ -427,26 +463,28 @@ convertRow :: RowParser r -> [SqlData] -> Int -> IO r
 convertRow fromRow_ rowRes ncols = do
   let rw = RowParseRO ncols
   case runStateT (runReaderT (unRP fromRow_) rw) (0, rowRes) of
-    Ok (val,(col,_))
-       | col == ncols -> return val
-       | otherwise -> errorColumnMismatch (ColumnOutOfBounds col)
-    Errors []  -> throwIO $ ConversionFailed "" "" "unknown error"
+    Ok (val, (col, _))
+      | col == ncols -> return val
+      | otherwise -> errorColumnMismatch (ColumnOutOfBounds col)
+    Errors [] -> throwIO $ ConversionFailed "" "" "unknown error"
     Errors [x] ->
       throw x `Control.Exception.catch` (\e -> errorColumnMismatch (e :: ColumnOutOfBounds))
-    Errors xs  -> throwIO $ ManyErrors xs
+    Errors xs -> throwIO $ ManyErrors xs
   where
     errorColumnMismatch :: ColumnOutOfBounds -> IO r
     errorColumnMismatch (ColumnOutOfBounds c) = do
       let vals = map (\f -> (gettypename f, ellipsis f)) rowRes
-      throwIO (ConversionFailed
-               (show ncols ++ " values: " ++ show vals)
-               ("at least " ++ show c ++ " slots in target type")
-               "mismatch between number of columns to convert and number in target type")
+      throwIO
+        ( ConversionFailed
+            (show ncols ++ " values: " ++ show vals)
+            ("at least " ++ show c ++ " slots in target type")
+            "mismatch between number of columns to convert and number in target type"
+        )
 
     ellipsis :: SqlData -> T.Text
     ellipsis sql
       | T.length bs > 20 = T.take 15 bs `T.append` "[...]"
-      | otherwise        = bs
+      | otherwise = bs
       where
         bs = T.pack $ show sql
 
@@ -458,18 +496,17 @@ withTransactionPrivate conn action ttype =
     commit
     return r
   where
-    begin    = execute_ conn $ case ttype of
-                 Deferred  -> "BEGIN TRANSACTION"
-                 Immediate -> "BEGIN IMMEDIATE TRANSACTION"
-                 Exclusive -> "BEGIN EXCLUSIVE TRANSACTION"
-                 Savepoint name -> Query $ "SAVEPOINT '" <> name <> "'"
-    commit   = execute_ conn $ case ttype of
-                 Savepoint name -> Query $ "RELEASE '" <> name <> "'"
-                 _ -> "COMMIT TRANSACTION"
+    begin = execute_ conn $ case ttype of
+      Deferred -> "BEGIN TRANSACTION"
+      Immediate -> "BEGIN IMMEDIATE TRANSACTION"
+      Exclusive -> "BEGIN EXCLUSIVE TRANSACTION"
+      Savepoint name -> Query $ "SAVEPOINT '" <> name <> "'"
+    commit = execute_ conn $ case ttype of
+      Savepoint name -> Query $ "RELEASE '" <> name <> "'"
+      _ -> "COMMIT TRANSACTION"
     rollback = execute_ conn $ case ttype of
-                 Savepoint name -> Query $ "ROLLBACK TO '" <> name <> "'"
-                 _ -> "ROLLBACK TRANSACTION"
-
+      Savepoint name -> Query $ "ROLLBACK TO '" <> name <> "'"
+      _ -> "ROLLBACK TRANSACTION"
 
 -- | Run an IO action inside a Sql transaction started with @BEGIN IMMEDIATE
 -- TRANSACTION@, which immediately blocks all other database connections from
@@ -497,7 +534,7 @@ withExclusiveTransaction conn action =
 --
 -- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
 lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = Sqlite.Direct.lastInsertRowId 
+lastInsertRowId = Sqlite.Direct.lastInsertRowId
 
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
@@ -521,13 +558,14 @@ withTransaction :: Connection -> IO a -> IO a
 withTransaction conn action =
   withTransactionPrivate conn action Deferred
 
-fmtError :: Show v => String -> Query -> [v] -> a
+fmtError :: (Show v) => String -> Query -> [v] -> a
 fmtError msg q xs =
-  throw FormatError {
-      fmtMessage  = msg
-    , fmtQuery    = q
-    , fmtParams   = map show xs
-    }
+  throw
+    FormatError
+      { fmtMessage = msg,
+        fmtQuery = q,
+        fmtParams = map show xs
+      }
 
 getQuery :: Sqlite.PreparedStatement -> IO Query
 getQuery stmt =

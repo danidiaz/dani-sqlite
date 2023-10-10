@@ -1,5 +1,7 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeOperators #-}
 
 ------------------------------------------------------------------------------
@@ -26,7 +28,7 @@ where
 
 import Control.Arrow (first)
 import Data.String (IsString (..))
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Tuple (Solo (..))
 import Data.Typeable (Typeable)
 

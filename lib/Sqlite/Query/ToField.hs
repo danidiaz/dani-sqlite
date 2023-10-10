@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
 -- |
