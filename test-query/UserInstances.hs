@@ -29,11 +29,11 @@ testUserFromField :: TestEnv -> Test
 testUserFromField TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE fromfield (t TEXT)"
   execute conn "INSERT INTO fromfield (t) VALUES (?)" (Solo ("test string" :: String))
-  [Solo r] <- query_ conn "SELECT t FROM fromfield" :: IO [(Solo MyType)]
+  [Solo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo MyType)]
   (MyType "fromField test string") @=? r
   execute_ conn "DELETE FROM fromfield"
   execute conn "INSERT INTO fromfield (t) VALUES (?)" (Solo (MyType "test2"))
-  [Solo r] <- query_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
+  [Solo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
   "toField test2" @=? r
 
 testSqlDataFromField :: TestEnv -> Test
@@ -46,7 +46,7 @@ testSqlDataFromField TestEnv{..} = TestCase $ do
   execute conn "INSERT INTO sqldatafromfield (t,i,b) VALUES (?,?,?)" (("test string2" :: T.Text,
                                                                     2 :: Int64,
                                                                     False :: Bool))
-  r <- query_ conn "SELECT * FROM sqldatafromfield" :: IO [[SqlData]]
+  r <- select_ conn "SELECT * FROM sqldatafromfield" :: IO [[SqlData]]
   let testData = [[SqlText "test string",
                    SqlInteger 1,
                    SqlInteger 1,

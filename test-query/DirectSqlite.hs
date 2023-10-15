@@ -15,7 +15,7 @@ testDirectSqlite :: TestEnv -> Test
 testDirectSqlite TestEnv{..} = TestCase $ do
   let dsConn = conn
   bracket (DS.prepare dsConn "SELECT 1+1") DS.finalize testDirect
-  [Solo (res :: Int)] <- query_ conn "SELECT 1+2"
+  [Solo (res :: Int)] <- select_ conn "SELECT 1+2"
   assertEqual "1+2" 3 res
   where
     testDirect stmt = do

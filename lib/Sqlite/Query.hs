@@ -58,11 +58,11 @@ module Sqlite.Query
     NamedParam (..),
 
     -- * Queries that return results
-    query,
-    query_,
-    queryWith,
-    queryWith_,
-    queryNamed,
+    select,
+    select_,
+    selectWith,
+    selectWith_,
+    selectNamed,
     lastInsertRowId,
     changes,
     totalChanges,
@@ -332,28 +332,28 @@ executeMany conn template paramRows = withStatement conn template $ \stmt -> do
 -- * 'FormatError': the query string mismatched with given arguments.
 --
 -- * 'ResultError': result conversion failed.
-query ::
+select ::
   (ToRow q, FromRow r) =>
   Connection ->
   Query ->
   q ->
   IO [r]
-query = queryWith fromRow
+select = selectWith fromRow
 
 -- | A version of 'query' that does not perform query substitution.
-query_ :: (FromRow r) => Connection -> Query -> IO [r]
-query_ = queryWith_ fromRow
+select_ :: (FromRow r) => Connection -> Query -> IO [r]
+select_ = selectWith_ fromRow
 
 -- | A version of 'query' that takes an explicit 'RowParser'.
-queryWith :: (ToRow q) => RowParser r -> Connection -> Query -> q -> IO [r]
-queryWith fromRow_ conn templ qs =
-  withStatementParams conn templ qs $ \stmt -> doFoldToList fromRow_ stmt
+selectWith :: (ToRow q) => RowParser r -> Connection -> Query -> q -> IO [r]
+selectWith fromRow_ conn templ qs =
+  withStatementParams conn templ qs do doFoldToList fromRow_
 
 -- | A version of 'query' that does not perform query substitution and
 -- takes an explicit 'RowParser'.
-queryWith_ :: RowParser r -> Connection -> Query -> IO [r]
-queryWith_ fromRow_ conn query =
-  withStatement conn query (doFoldToList fromRow_)
+selectWith_ :: RowParser r -> Connection -> Query -> IO [r]
+selectWith_ fromRow_ conn query =
+  withStatement conn query do doFoldToList fromRow_
 
 -- | A version of 'query' where the query parameters (placeholders)
 -- are named.
@@ -363,15 +363,15 @@ queryWith_ fromRow_ conn query =
 -- @
 -- r \<- 'queryNamed' c \"SELECT * FROM posts WHERE id=:id AND date>=:date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
 -- @
-queryNamed :: (FromRow r) => Connection -> Query -> [NamedParam] -> IO [r]
-queryNamed conn templ params =
-  withStatementNamedParams conn templ params $ \stmt -> doFoldToList fromRow stmt
+selectNamed :: (FromRow r) => Connection -> Query -> [NamedParam] -> IO [r]
+selectNamed conn templ params =
+  withStatementNamedParams conn templ params do doFoldToList fromRow
 
 -- | A version of 'execute' that does not perform query substitution.
 execute_ :: Connection -> Query -> IO ()
 execute_ conn template =
-  withStatement conn template $ \stmt ->
-    void $ Sqlite.step stmt
+  withStatement conn template \stmt ->
+    void do Sqlite.step stmt
 
 -- | A version of 'execute' where the query parameters (placeholders)
 -- are named.
