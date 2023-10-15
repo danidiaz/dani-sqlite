@@ -22,22 +22,22 @@ test1 = do
   conn <- open ":memory:"
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY, id2 INTEGER, id3 INTEGER)"
   execute_ conn "INSERT INTO testimp (id, id2, id3) VALUES (1, 2, 3)"
-  [_v] <- query_ conn "SELECT * FROM testimp" :: IO [TestType]
-  [_v] <- query conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
+  [_v] <- select_ conn "SELECT * FROM testimp" :: IO [TestType]
+  [_v] <- select conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
   close conn
 
 test2 :: Connection -> IO ()
 test2 conn = do
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY)"
   execute_ conn "INSERT INTO testimp (id) VALUES (1)"
-  [Solo _v] <- query_ conn (Query q) :: IO [Solo Int]
+  [Solo _v] <- select_ conn (Query q) :: IO [Solo Int]
   return ()
   where
     q = T.concat ["SELECT * FROM ", "testimp"]
 
 test3 :: Connection -> IO ()
 test3 conn = do
-  [_v] <- query conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
+  [_v] <- select conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
   return ()
 
 testImports :: TestEnv -> Test
