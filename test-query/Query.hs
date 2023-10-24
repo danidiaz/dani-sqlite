@@ -110,12 +110,12 @@ testSimpleMultiInsert TestEnv{..} = TestCase $ do
 testSimpleQueryCov :: TestEnv -> Test
 testSimpleQueryCov TestEnv{..} = TestCase $ do
   let str = "SELECT 1+1" :: T.Text
-      q   = "SELECT 1+1" :: Query
-  fromQuery q @=? str
+      q   = "SELECT 1+1" :: Sql
+  sqlText q @=? str
   show str @=? show q
-  q @=? ((read . show $ q) :: Query)
+  q @=? ((read . show $ q) :: Sql)
   q @=? q
-  q @=? (Query "SELECT 1" <> Query "+1")
+  q @=? (Sql "SELECT 1" <> Sql "+1")
   q @=? foldr mappend mempty ["SELECT ", "1", "+", "1"]
   True @=? q <= q
 

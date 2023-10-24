@@ -21,7 +21,7 @@
 module Sqlite.Query.Types
   ( Null (..),
     Solo (..),
-    Query (..),
+    Sql (..),
     (:.) (..),
   )
 where
@@ -58,26 +58,26 @@ instance Eq Null where
 --
 -- The underlying type is a 'Text', and literal Haskell strings that
 -- contain Unicode characters will be correctly transformed to UTF-8.
-newtype Query = Query
-  { fromQuery :: T.Text
+newtype Sql = Sql
+  { sqlText :: T.Text
   }
   deriving (Eq, Ord, Typeable)
 
-instance Show Query where
-  show = show . fromQuery
+instance Show Sql where
+  show = show . sqlText
 
-instance Read Query where
-  readsPrec i = fmap (first Query) . readsPrec i
+instance Read Sql where
+  readsPrec i = fmap (first Sql) . readsPrec i
 
-instance IsString Query where
-  fromString = Query . T.pack
+instance IsString Sql where
+  fromString = Sql . T.pack
 
-instance Semigroup Query where
-  Query a <> Query b = Query (T.append a b)
+instance Semigroup Sql where
+  Sql a <> Sql b = Sql (T.append a b)
   {-# INLINE (<>) #-}
 
-instance Monoid Query where
-  mempty = Query T.empty
+instance Monoid Sql where
+  mempty = Sql T.empty
   mappend = (<>)
   {-# INLINE mappend #-}
 
