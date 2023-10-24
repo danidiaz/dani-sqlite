@@ -4,7 +4,6 @@ module Fold (
     testFolds) where
 
 import Common
-import Data.Tuple (Solo(..))
 
 testFolds :: TestEnv -> Test
 testFolds TestEnv{..} = TestCase $ do
@@ -14,7 +13,7 @@ testFolds TestEnv{..} = TestCase $ do
   execute_ conn "INSERT INTO testf (t) VALUES (6)"
   val <- fold_ conn "SELECT id,t FROM testf" ([],[]) sumValues
   assertEqual "fold_" ([3,2,1], [6,5,4]) val
-  val <- fold conn "SELECT id,t FROM testf WHERE id > ?" (Solo (1 :: Int)) ([],[]) sumValues
+  val <- fold conn "SELECT id,t FROM testf WHERE id > ?" (MkSolo (1 :: Int)) ([],[]) sumValues
   assertEqual "fold" ([3,2], [6,5]) val
   val <- foldNamed conn "SELECT id,t FROM testf WHERE id > :id" [":id" := (1 :: Int)] ([],[]) sumValues
   assertEqual "fold" ([3,2], [6,5]) val

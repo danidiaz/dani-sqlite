@@ -14,10 +14,7 @@ module Errors (
 import           Control.Exception
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import           Data.Word
-import Data.Tuple (Solo(..))
 
 import           Common
 import Sqlite.Query.Types (Null)
@@ -53,7 +50,7 @@ testErrorsColumns TestEnv{..} = TestCase $ do
   execute_ conn "INSERT INTO cols (t) VALUES ('test string')"
   rows <- select_ conn "SELECT t FROM cols" :: IO [Solo String]
   assertEqual "row count" 1 (length rows)
-  assertEqual "string" (Solo "test string") (head rows)
+  assertEqual "string" (MkSolo "test string") (head rows)
   -- Mismatched number of output columns (selects two, dest type has 1 field)
   assertResultErrorCaught (select_ conn "SELECT id,t FROM cols" :: IO [Solo Int])
   -- Same as above but the other way round (select 1, dst has two)
@@ -77,7 +74,7 @@ testErrorsColumns TestEnv{..} = TestCase $ do
 --  assertResultErrorCaught (select_ conn "SELECT 1.0" :: IO [Solo T.Text])
 --  assertResultErrorCaught (select_ conn "SELECT 1.0" :: IO [Solo LT.Text])
   -- Mismatching types (sources don't match destination bytestring)
-  [Solo (_ :: B.ByteString)] <-  select_ conn "SELECT X'3177'"
+  [MkSolo (_ :: B.ByteString)] <-  select_ conn "SELECT X'3177'"
   assertResultErrorCaught (select_ conn "SELECT 1" :: IO [Solo B.ByteString])
   assertResultErrorCaught (select_ conn "SELECT 1" :: IO [Solo LB.ByteString])
   assertResultErrorCaught (select_ conn "SELECT 'foo'" :: IO [Solo B.ByteString])
@@ -87,19 +84,19 @@ testErrorsColumns TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE cols_blobs (id INTEGER, b BLOB)"
   execute conn "INSERT INTO cols_blobs (id, b) VALUES (?,?)" (1 :: Int, d)
   assertResultErrorCaught
-    (do [Solo _t1] <- select conn "SELECT b FROM cols_blobs WHERE id = ?" (Solo (1 :: Int)) :: IO [Solo String]
+    (do [MkSolo _t1] <- select conn "SELECT b FROM cols_blobs WHERE id = ?" (MkSolo (1 :: Int)) :: IO [Solo String]
         return ())
   execute_ conn "CREATE TABLE cols_bools (id INTEGER PRIMARY KEY, b BOOLEAN)"
   -- 3 = invalid value for bool, must be 0 or 1
   execute_ conn "INSERT INTO cols_bools (b) VALUES (3)"
   assertResultErrorCaught
-    (do [Solo _t1] <- select_ conn "SELECT b FROM cols_bools" :: IO [Solo Bool]
+    (do [MkSolo _t1] <- select_ conn "SELECT b FROM cols_bools" :: IO [Solo Bool]
         return ())
-  [Solo (nullVal :: Null)] <- select_ conn "SELECT NULL"
+  [MkSolo (nullVal :: Null)] <- select_ conn "SELECT NULL"
   False @=? nullVal == nullVal
   False @=? nullVal /= nullVal
   assertResultErrorCaught
-    (do [Solo (_t1 :: Null)] <- select_ conn "SELECT 1" :: IO [Solo Null]
+    (do [MkSolo (_t1 :: Null)] <- select_ conn "SELECT 1" :: IO [Solo Null]
         return ())
 
 testErrorsInvalidParams :: TestEnv -> Test
@@ -107,13 +104,13 @@ testErrorsInvalidParams TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE invparams (id INTEGER PRIMARY KEY, t TEXT)"
   -- Test that only unnamed params are accepted
   assertFormatErrorCaught
-    (execute conn "INSERT INTO invparams (t) VALUES (:v)" (Solo ("foo" :: String)))
+    (execute conn "INSERT INTO invparams (t) VALUES (:v)" (MkSolo ("foo" :: String)))
   assertFormatErrorCaught
     (execute conn "INSERT INTO invparams (id, t) VALUES (:v,$1)" (3::Int, "foo" :: String))
   -- In this case, we have two bound params but only one given to
   -- execute.  This should cause an error.
   assertFormatErrorCaught
-    (execute conn "INSERT INTO invparams (id, t) VALUES (?, ?)" (Solo (3::Int)))
+    (execute conn "INSERT INTO invparams (id, t) VALUES (?, ?)" (MkSolo (3::Int)))
 
 testErrorsInvalidNamedParams :: TestEnv -> Test
 testErrorsInvalidNamedParams TestEnv{..} = TestCase $ do
@@ -126,7 +123,7 @@ testErrorsInvalidNamedParams TestEnv{..} = TestCase $ do
     (selectNamed conn "SELECT :foo + :bar" [":foo" := (1 :: Int)] :: IO [Solo Int])
   -- Can't use named params in SQL string with the unnamed query/exec variants
   assertFormatErrorCaught
-    (select conn "SELECT :foo" (Solo (1 :: Int)) :: IO [Solo Int])
+    (select conn "SELECT :foo" (MkSolo (1 :: Int)) :: IO [Solo Int])
 
 testErrorsWithStatement :: TestEnv -> Test
 testErrorsWithStatement TestEnv{..} = TestCase $ do
@@ -147,7 +144,7 @@ testErrorsTransaction TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE trans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withTransaction conn $ do
     executeNamed conn "INSERT INTO trans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
-    [Solo r] <- select_ conn "SELECT t FROM trans" :: IO [Solo String]
+    [MkSolo r] <- select_ conn "SELECT t FROM trans" :: IO [Solo String]
     return r
   v @=? "foo"
   e <- rowExists
@@ -169,7 +166,7 @@ testErrorsTransaction TestEnv{..} = TestCase $ do
     rowExists = do
       rows <- select_ conn "SELECT t FROM trans" :: IO [Solo String]
       case rows of
-        [Solo txt] -> do
+        [MkSolo txt] -> do
           "foo" @=? txt
           return True
         [] ->
@@ -181,7 +178,7 @@ testErrorsImmediateTransaction TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE itrans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withImmediateTransaction conn $ do
     executeNamed conn "INSERT INTO itrans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
-    [Solo r] <- select_ conn "SELECT t FROM itrans" :: IO [Solo String]
+    [MkSolo r] <- select_ conn "SELECT t FROM itrans" :: IO [Solo String]
     return r
   v @=? "foo"
   e <- rowExists
@@ -203,7 +200,7 @@ testErrorsImmediateTransaction TestEnv{..} = TestCase $ do
     rowExists = do
       rows <- select_ conn "SELECT t FROM itrans" :: IO [Solo String]
       case rows of
-        [Solo txt] -> do
+        [MkSolo txt] -> do
           "foo" @=? txt
           return True
         [] ->
@@ -215,7 +212,7 @@ testErrorsExclusiveTransaction TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE etrans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withExclusiveTransaction conn $ do
     executeNamed conn "INSERT INTO etrans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
-    [Solo r] <- select_ conn "SELECT t FROM etrans" :: IO [Solo String]
+    [MkSolo r] <- select_ conn "SELECT t FROM etrans" :: IO [Solo String]
     return r
   v @=? "foo"
   e <- rowExists
@@ -237,7 +234,7 @@ testErrorsExclusiveTransaction TestEnv{..} = TestCase $ do
     rowExists = do
       rows <- select_ conn "SELECT t FROM etrans" :: IO [Solo String]
       case rows of
-        [Solo txt] -> do
+        [MkSolo txt] -> do
           "foo" @=? txt
           return True
         [] ->
