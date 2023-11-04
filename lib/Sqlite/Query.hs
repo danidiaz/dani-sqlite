@@ -397,28 +397,28 @@ fold ::
   Connection ->
   Sql ->
   params ->
-  a ->
   (a -> row -> IO a) ->
+  IO a ->
   IO a
-fold conn query params initalState action =
+fold conn query params action initalState =
   withStatementParams conn query params $ \stmt ->
-    doFold fromRow stmt initalState action
+    doFold fromRow stmt action initalState 
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
-  fmap reverse $ doFold fromRow_ stmt [] (\acc e -> return (e : acc))
+  reverse <$> doFold fromRow_ stmt (\acc e -> return (e : acc)) (pure [])
 
 -- | A version of 'fold' which does not perform parameter substitution.
 fold_ ::
   (FromRow row) =>
   Connection ->
   Sql ->
-  a ->
   (a -> row -> IO a) ->
+  IO a ->
   IO a
-fold_ conn query initalState action =
+fold_ conn query action initalState =
   withStatement conn query $ \stmt ->
-    doFold fromRow stmt initalState action
+    doFold fromRow stmt action initalState 
 
 -- | A version of 'fold' where the query parameters (placeholders) are
 -- named.
@@ -427,19 +427,20 @@ foldNamed ::
   Connection ->
   Sql ->
   [NamedParam] ->
-  a ->
   (a -> row -> IO a) ->
+  IO a ->
   IO a
-foldNamed conn query params initalState action =
+foldNamed conn query params action initalState =
   withStatementNamedParams conn query params $ \stmt ->
-    doFold fromRow stmt initalState action
+    doFold fromRow stmt action initalState 
 
-foldPrepared :: (FromRow row) => PreparedStatement -> a -> (a -> row -> IO a) -> IO a
+foldPrepared :: (FromRow row) => PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
 foldPrepared = doFold fromRow
 
-doFold :: RowParser row -> PreparedStatement -> a -> (a -> row -> IO a) -> IO a
-doFold fromRow_ stmt initState action =
-  loop initState
+doFold :: RowParser row -> PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
+doFold fromRow_ stmt action initialAction = do
+  initialValue <- initialAction
+  loop initialValue
   where
     loop val = do
       maybeNextRow <- nextRowWith fromRow_ stmt
