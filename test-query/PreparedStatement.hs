@@ -8,7 +8,7 @@ module PreparedStatement (
   ) where
 
 import Common
-    ( Solo(Solo),
+    ( Solo(..),
       ColumnIndex(ColumnIndex),
       execute_,
       withStatement,
@@ -22,7 +22,6 @@ import Common
       Test(TestCase),
       TestEnv(..) )
 import Data.Maybe(fromJust)
-import Data.Tuple (Solo(..))
 
 import qualified Sqlite as Base
 
@@ -33,7 +32,7 @@ testBind TestEnv{..} = TestCase $ do
   withStatement conn "SELECT t FROM test_bind WHERE id=?" $ \stmt ->
     withBind stmt [1::Int] $ do
       row <- nextRow stmt :: IO (Maybe (Solo String))
-      assertEqual "result" (Solo "result") (fromJust row)
+      assertEqual "result" (MkSolo "result") (fromJust row)
 
 testDoubleBind :: TestEnv -> Test
 testDoubleBind TestEnv{..} = TestCase $ do
@@ -43,11 +42,11 @@ testDoubleBind TestEnv{..} = TestCase $ do
   withStatement conn "SELECT t FROM test_double_bind WHERE id=?" $ \stmt -> do
     withBind stmt [1::Int] $ do
       row <- nextRow stmt :: IO (Maybe (Solo String))
-      assertEqual "first result" (Solo "first result") (fromJust row)
+      assertEqual "first result" (MkSolo "first result") (fromJust row)
 
     withBind stmt [2::Int] $ do
       row <- nextRow stmt :: IO (Maybe (Solo String))
-      assertEqual "second result" (Solo "second result") (fromJust row)
+      assertEqual "second result" (MkSolo "second result") (fromJust row)
 
 testPreparedStatements :: TestEnv -> Test
 testPreparedStatements TestEnv{..} = TestCase $ do
@@ -61,8 +60,8 @@ testPreparedStatements TestEnv{..} = TestCase $ do
     ["first result" :: String, "second result"] @=? elems
     where
       queryOne stmt rowId =
-        withBind stmt (Solo rowId) $ do
-          Just (Solo r) <- nextRow stmt
+        withBind stmt (MkSolo rowId) $ do
+          Just (MkSolo r) <- nextRow stmt
           Nothing <- nextRow stmt :: IO (Maybe (Solo String))
           return r
 

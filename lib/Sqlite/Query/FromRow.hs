@@ -138,7 +138,7 @@ numFieldsRemaining = RP $ do
   return $! ncols - columnIdx
 
 instance (FromField a) => FromRow (Solo a) where
-    fromRow = Solo <$> field
+    fromRow = MkSolo <$> field
 
 instance (FromField a, FromField b) => FromRow (a,b) where
     fromRow = (,) <$> field <*> field

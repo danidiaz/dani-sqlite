@@ -28,12 +28,12 @@ instance ToField MyType where
 testUserFromField :: TestEnv -> Test
 testUserFromField TestEnv{..} = TestCase $ do
   execute_ conn "CREATE TABLE fromfield (t TEXT)"
-  execute conn "INSERT INTO fromfield (t) VALUES (?)" (Solo ("test string" :: String))
-  [Solo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo MyType)]
+  execute conn "INSERT INTO fromfield (t) VALUES (?)" (MkSolo ("test string" :: String))
+  [MkSolo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo MyType)]
   (MyType "fromField test string") @=? r
   execute_ conn "DELETE FROM fromfield"
-  execute conn "INSERT INTO fromfield (t) VALUES (?)" (Solo (MyType "test2"))
-  [Solo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
+  execute conn "INSERT INTO fromfield (t) VALUES (?)" (MkSolo (MyType "test2"))
+  [MkSolo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
   "toField test2" @=? r
 
 testSqlDataFromField :: TestEnv -> Test

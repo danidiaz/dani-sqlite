@@ -20,7 +20,7 @@ module Sqlite.Query
   ( -- ** Examples of use
     -- $use
 
-    -- ** The Query type
+    -- ** The Sql type
     -- $querytype
 
     -- ** Parameter substitution
@@ -46,7 +46,7 @@ module Sqlite.Query
 
     -- ** Type conversions
     -- $types
-    Query (..),
+    Sql (..),
     Connection (..),
     ToRow (..),
     FromRow (..),
@@ -144,7 +144,7 @@ instance Show NamedParam where
 -- string does not match the number of parameters provided.
 data FormatError = FormatError
   { fmtMessage :: String,
-    fmtQuery :: Query,
+    fmtSql :: Sql,
     fmtParams :: [String]
   }
   deriving (Eq, Show, Typeable)
@@ -166,7 +166,7 @@ bind stmt params = do
   Sqlite.bind stmt qp
   where
     throwColumnMismatch qp nParams = do
-      templ <- getQuery stmt
+      templ <- getSql stmt
       fmtError
         ( "Sql query contains "
             ++ show nParams
@@ -177,7 +177,7 @@ bind stmt params = do
         templ
         qp
     errorCheckParamName qp paramNdx = do
-      templ <- getQuery stmt
+      templ <- getSql stmt
       name <- Sqlite.bindParameterName stmt paramNdx
       case name of
         Just n ->
@@ -202,7 +202,7 @@ bindNamed stmt params = do
               Just i ->
                 Sqlite.bindSqlData stmt i (toField v)
               Nothing -> do
-                templ <- getQuery stmt
+                templ <- getSql stmt
                 fmtError
                   ("Unknown named parameter '" ++ T.unpack n ++ "'")
                   templ
@@ -211,7 +211,7 @@ bindNamed stmt params = do
         params
 
     throwColumnMismatch nParams = do
-      templ <- getQuery stmt
+      templ <- getSql stmt
       fmtError
         ( "Sql query contains "
             ++ show nParams
@@ -261,8 +261,8 @@ withBind stmt params io = do
 -- 'nextRow' to iterate on the values returned. Once 'nextRow' returns
 -- 'Nothing', you need to invoke 'reset' before reexecuting the statement again
 -- with 'nextRow'.
-openStatement :: Connection -> Query -> IO PreparedStatement
-openStatement conn (Query t) = do
+openStatement :: Connection -> Sql -> IO PreparedStatement
+openStatement conn (Sql t) = do
   Sqlite.prepare conn t
 
 -- | Closes a prepared statement.
@@ -271,14 +271,14 @@ closeStatement stmt = Sqlite.finalize stmt
 
 -- | Opens a prepared statement, executes an action using this statement, and
 -- closes the statement, even in the presence of exceptions.
-withStatement :: Connection -> Query -> (PreparedStatement -> IO a) -> IO a
+withStatement :: Connection -> Sql -> (PreparedStatement -> IO a) -> IO a
 withStatement conn query = bracket (openStatement conn query) closeStatement
 
 -- A version of 'withStatement' which binds parameters.
 withStatementParams ::
   (ToRow params) =>
   Connection ->
-  Query ->
+  Sql ->
   params ->
   (PreparedStatement -> IO a) ->
   IO a
@@ -291,7 +291,7 @@ withStatementParams conn template params action =
 -- A version of 'withStatement' which binds named parameters.
 withStatementNamedParams ::
   Connection ->
-  Query ->
+  Sql ->
   [NamedParam] ->
   (PreparedStatement -> IO a) ->
   IO a
@@ -302,7 +302,7 @@ withStatementNamedParams conn template namedParams action =
 -- expected to return results.
 --
 -- Throws 'FormatError' if the query could not be formatted correctly.
-execute :: (ToRow q) => Connection -> Query -> q -> IO ()
+execute :: (ToRow q) => Connection -> Sql -> q -> IO ()
 execute conn template qs =
   withStatementParams conn template qs $ \stmt ->
     void . Sqlite.step $ stmt
@@ -311,7 +311,7 @@ execute conn template qs =
 -- expected to return results.
 --
 -- Throws 'FormatError' if the query could not be formatted correctly.
-executeMany :: (ToRow q) => Connection -> Query -> [q] -> IO ()
+executeMany :: (ToRow q) => Connection -> Sql -> [q] -> IO ()
 executeMany conn template paramRows = withStatement conn template $ \stmt -> do
   forM_ paramRows $ \params ->
     withBind
@@ -335,23 +335,23 @@ executeMany conn template paramRows = withStatement conn template $ \stmt -> do
 select ::
   (ToRow q, FromRow r) =>
   Connection ->
-  Query ->
+  Sql ->
   q ->
   IO [r]
 select = selectWith fromRow
 
 -- | A version of 'query' that does not perform query substitution.
-select_ :: (FromRow r) => Connection -> Query -> IO [r]
+select_ :: (FromRow r) => Connection -> Sql -> IO [r]
 select_ = selectWith_ fromRow
 
 -- | A version of 'query' that takes an explicit 'RowParser'.
-selectWith :: (ToRow q) => RowParser r -> Connection -> Query -> q -> IO [r]
+selectWith :: (ToRow q) => RowParser r -> Connection -> Sql -> q -> IO [r]
 selectWith fromRow_ conn templ qs =
   withStatementParams conn templ qs do doFoldToList fromRow_
 
 -- | A version of 'query' that does not perform query substitution and
 -- takes an explicit 'RowParser'.
-selectWith_ :: RowParser r -> Connection -> Query -> IO [r]
+selectWith_ :: RowParser r -> Connection -> Sql -> IO [r]
 selectWith_ fromRow_ conn query =
   withStatement conn query do doFoldToList fromRow_
 
@@ -363,19 +363,19 @@ selectWith_ fromRow_ conn query =
 -- @
 -- r \<- 'queryNamed' c \"SELECT * FROM posts WHERE id=:id AND date>=:date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
 -- @
-selectNamed :: (FromRow r) => Connection -> Query -> [NamedParam] -> IO [r]
+selectNamed :: (FromRow r) => Connection -> Sql -> [NamedParam] -> IO [r]
 selectNamed conn templ params =
   withStatementNamedParams conn templ params do doFoldToList fromRow
 
 -- | A version of 'execute' that does not perform query substitution.
-execute_ :: Connection -> Query -> IO ()
+execute_ :: Connection -> Sql -> IO ()
 execute_ conn template =
   withStatement conn template \stmt ->
     void do Sqlite.step stmt
 
 -- | A version of 'execute' where the query parameters (placeholders)
 -- are named.
-executeNamed :: Connection -> Query -> [NamedParam] -> IO ()
+executeNamed :: Connection -> Sql -> [NamedParam] -> IO ()
 executeNamed conn template params =
   withStatementNamedParams conn template params $ \stmt ->
     void $ Sqlite.step stmt
@@ -395,7 +395,7 @@ executeNamed conn template params =
 fold ::
   (FromRow row, ToRow params) =>
   Connection ->
-  Query ->
+  Sql ->
   params ->
   a ->
   (a -> row -> IO a) ->
@@ -412,7 +412,7 @@ doFoldToList fromRow_ stmt =
 fold_ ::
   (FromRow row) =>
   Connection ->
-  Query ->
+  Sql ->
   a ->
   (a -> row -> IO a) ->
   IO a
@@ -425,7 +425,7 @@ fold_ conn query initalState action =
 foldNamed ::
   (FromRow row) =>
   Connection ->
-  Query ->
+  Sql ->
   [NamedParam] ->
   a ->
   (a -> row -> IO a) ->
@@ -505,12 +505,12 @@ withTransactionPrivate conn action ttype =
       Deferred -> "BEGIN TRANSACTION"
       Immediate -> "BEGIN IMMEDIATE TRANSACTION"
       Exclusive -> "BEGIN EXCLUSIVE TRANSACTION"
-      Savepoint name -> Query $ "SAVEPOINT '" <> name <> "'"
+      Savepoint name -> Sql $ "SAVEPOINT '" <> name <> "'"
     commit = execute_ conn $ case ttype of
-      Savepoint name -> Query $ "RELEASE '" <> name <> "'"
+      Savepoint name -> Sql $ "RELEASE '" <> name <> "'"
       _ -> "COMMIT TRANSACTION"
     rollback = execute_ conn $ case ttype of
-      Savepoint name -> Query $ "ROLLBACK TO '" <> name <> "'"
+      Savepoint name -> Sql $ "ROLLBACK TO '" <> name <> "'"
       _ -> "ROLLBACK TRANSACTION"
 
 -- | Run an IO action inside a Sql transaction started with @BEGIN IMMEDIATE
@@ -563,21 +563,21 @@ withTransaction :: Connection -> IO a -> IO a
 withTransaction conn action =
   withTransactionPrivate conn action Deferred
 
-fmtError :: (Show v) => String -> Query -> [v] -> a
+fmtError :: (Show v) => String -> Sql -> [v] -> a
 fmtError msg q xs =
   throw
     FormatError
       { fmtMessage = msg,
-        fmtQuery = q,
+        fmtSql = q,
         fmtParams = map show xs
       }
 
-getQuery :: Sqlite.PreparedStatement -> IO Query
-getQuery stmt =
+getSql :: Sqlite.PreparedStatement -> IO Sql
+getSql stmt =
   toQuery <$> Sqlite.Direct.statementSql stmt
   where
     toQuery =
-      Query . maybe "no query string" (\(Sqlite.Direct.Utf8 s) -> TE.decodeUtf8 s)
+      Sql . maybe "no query string" (\(Sqlite.Direct.Utf8 s) -> TE.decodeUtf8 s)
 
 -- $use
 -- An example that creates a table 'test', inserts a couple of rows

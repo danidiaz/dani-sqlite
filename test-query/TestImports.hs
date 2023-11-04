@@ -30,7 +30,7 @@ test2 :: Connection -> IO ()
 test2 conn = do
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY)"
   execute_ conn "INSERT INTO testimp (id) VALUES (1)"
-  [Solo _v] <- select_ conn (Query q) :: IO [Solo Int]
+  [MkSolo _v] <- select_ conn (Sql q) :: IO [Solo Int]
   return ()
   where
     q = T.concat ["SELECT * FROM ", "testimp"]
