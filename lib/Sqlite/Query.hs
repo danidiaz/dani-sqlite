@@ -398,7 +398,7 @@ fold ::
   Sql ->
   params ->
   (a -> row -> IO a) ->
-  a ->
+  IO a ->
   IO a
 fold conn query params action initalState =
   withStatementParams conn query params $ \stmt ->
@@ -406,7 +406,7 @@ fold conn query params action initalState =
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
-  reverse <$> doFold fromRow_ stmt (\acc e -> return (e : acc)) []
+  reverse <$> doFold fromRow_ stmt (\acc e -> return (e : acc)) (pure [])
 
 -- | A version of 'fold' which does not perform parameter substitution.
 fold_ ::
@@ -414,7 +414,7 @@ fold_ ::
   Connection ->
   Sql ->
   (a -> row -> IO a) ->
-  a ->
+  IO a ->
   IO a
 fold_ conn query action initalState =
   withStatement conn query $ \stmt ->
@@ -428,18 +428,19 @@ foldNamed ::
   Sql ->
   [NamedParam] ->
   (a -> row -> IO a) ->
-  a ->
+  IO a ->
   IO a
 foldNamed conn query params action initalState =
   withStatementNamedParams conn query params $ \stmt ->
     doFold fromRow stmt action initalState 
 
-foldPrepared :: (FromRow row) => PreparedStatement -> (a -> row -> IO a)  -> a -> IO a
+foldPrepared :: (FromRow row) => PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
 foldPrepared = doFold fromRow
 
-doFold :: RowParser row -> PreparedStatement -> (a -> row -> IO a)  -> a -> IO a
-doFold fromRow_ stmt action =
-  loop
+doFold :: RowParser row -> PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
+doFold fromRow_ stmt action initialAction = do
+  initialValue <- initialAction
+  loop initialValue
   where
     loop val = do
       maybeNextRow <- nextRowWith fromRow_ stmt
