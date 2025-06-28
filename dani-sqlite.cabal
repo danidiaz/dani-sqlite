@@ -64,21 +64,6 @@ library direct
   ghc-options:      -Wall -fwarn-tabs
   visibility: public
 
-library pool
-    hs-source-dirs:   lib-pool
-    exposed-modules:  
-        Sqlite.Pool
-    build-depends:
-        base       >= 4.16.0.0 && < 5,
-        aeson >= 2.2 && < 2.3,
-        resource-pool >= 0.4,
-        text       >= 2.0,
-        dani-sqlite,
-
-    ghc-options:      -Wall -fwarn-tabs
-    default-language: GHC2021
-    visibility: public
-
 test-suite test
   type:               exitcode-stdio-1.0
   main-is:            Main.hs

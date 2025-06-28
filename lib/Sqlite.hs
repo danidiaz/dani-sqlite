@@ -8,6 +8,7 @@ module Sqlite
   ( -- * Connection management
     open,
     openV2,
+    openV2NoMutexReadWrite,
     VFS (..),
     OpenV2Flag (..),
     OpenV2Mode (..),
@@ -327,6 +328,21 @@ openV2 vfs flags mode path = do
         VFSWithName vfsName -> Just vfsName
   Direct.openV2 (toUtf8 <$> mvfs) flags mode (toUtf8 path)
     >>= checkErrorMsg ("openV2 " `appendShow` path)
+
+
+-- | Typical set of arguments for a connection pool.
+-- https://www.sqlite.org/threadsafe.html 
+-- SQLITE_OPEN_NOMUTEX flag causes the database connection to be in the multi-thread mode 
+-- In this mode, SQLite can be safely used by multiple threads provided that no
+-- single database connection nor any object derived from database connection,
+-- such as a prepared statement, is used in two or more threads at the same
+-- time. 
+openV2NoMutexReadWrite ::
+  -- | Database filename.
+  Text ->
+  IO Connection
+openV2NoMutexReadWrite =
+ Sqlite.openV2 DefaultVFS [OpenV2ExtendedResultCode, OpenV2NoMutex] OpenV2ReadWrite
 
 data VFS
   = DefaultVFS
