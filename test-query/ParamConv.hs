@@ -1,4 +1,7 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-} 
+{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE CPP #-} 
+{-# LANGUAGE RecordWildCards #-} 
 
 #if MIN_VERSION_base(4,9,0)
 {-# OPTIONS_GHC -Wno-overflowed-literals #-}

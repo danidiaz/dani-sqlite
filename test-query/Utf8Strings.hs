@@ -1,4 +1,5 @@
--- -*- coding: utf-8 -*-
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Utf8Strings (testUtf8Simplest
                   , testBlobs) where

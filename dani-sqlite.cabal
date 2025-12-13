@@ -80,17 +80,11 @@ test-suite test
                     , dani-sqlite
                     , dani-sqlite:bindings
                     , dani-sqlite:direct
-  default-language:   GHC2021
-  default-extensions: Rank2Types
-                      ScopedTypeVariables
-                      NamedFieldPuns
-                      RecordWildCards
-                      OverloadedStrings
-                      DeriveDataTypeable
+  default-language: GHC2024
   ghc-options:        -Wall -threaded -fno-warn-name-shadowing -fno-warn-unused-do-bind
 
 test-suite test-query
-  default-language: GHC2021
+  default-language: GHC2024
   type:             exitcode-stdio-1.0
 
   hs-source-dirs: test-query
@@ -108,11 +102,6 @@ test-suite test-query
 
   ghc-options: -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
 
-  default-extensions:
-      NamedFieldPuns
-    , OverloadedStrings
-    , Rank2Types
-    , RecordWildCards
 
   build-depends: base
                , base16-bytestring

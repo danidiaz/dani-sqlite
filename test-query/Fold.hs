@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE RecordWildCards #-} 
 
 module Fold (
     testFolds) where

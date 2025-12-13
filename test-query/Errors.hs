@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, BangPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-} 
 
 module Errors (
     testErrorsColumns

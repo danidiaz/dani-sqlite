@@ -1,4 +1,4 @@
-
+{-# LANGUAGE OverloadedStrings #-}
 module TestImports (
     testImports
   ) where
