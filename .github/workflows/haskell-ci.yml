@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: apt
         run: |
-          apt-get update
+          # apt-get update
           apt-get install -y --no-install-recommends gnupg ca-certificates dirmngr curl git software-properties-common libtinfo5
           apt-get install -y --no-install-recommends sqlite3
           mkdir -p "$HOME/.ghcup/bin"
