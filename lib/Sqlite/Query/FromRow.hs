@@ -30,9 +30,6 @@ module Sqlite.Query.FromRow
 
 import           Control.Exception (SomeException(..))
 import           Control.Monad (replicateM)
-import           Control.Monad.Trans.State.Strict
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Class
 import           GHC.Generics
 
 import           Sqlite.Query.FromField
@@ -116,25 +113,25 @@ class FromRow a where
     fromRow = to <$> gfromRow
 
 fieldWith :: FieldParser a -> RowParser a
-fieldWith fieldP = RP $ do
-    ncols <- asks nColumns
-    (column, remaining) <- lift get
-    lift (put (column + 1, tail remaining))
+fieldWith fieldP = do
+    ncols <- asksRowParserRO nColumns
+    (column, remaining) <- getRowParserState
+    putRowParserState (column + 1, tail remaining)
     if column >= ncols
     then
-      lift (lift (Errors [SomeException (ColumnOutOfBounds (column+1))]))
+      liftOk (Errors [SomeException (ColumnOutOfBounds (column+1))])
     else do
       let r = head remaining
           field' = Field r column
-      lift (lift (fieldP field'))
+      liftOk (fieldP field')
 
 field :: FromField a => RowParser a
 field = fieldWith fromField
 
 numFieldsRemaining :: RowParser Int
-numFieldsRemaining = RP $ do
-  ncols <- asks nColumns
-  (columnIdx,_) <- lift get
+numFieldsRemaining = do
+  ncols <- asksRowParserRO nColumns
+  (columnIdx,_) <- getRowParserState
   return $! ncols - columnIdx
 
 instance (FromField a) => FromRow (Solo a) where

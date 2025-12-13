@@ -107,8 +107,6 @@ where
 
 import Control.Exception
 import Control.Monad (forM_, void, when)
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.State.Strict
 import Data.Int (Int64)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -467,8 +465,8 @@ nextRowWith fromRow_ stmt = do
 
 convertRow :: RowParser r -> [SqlData] -> Int -> IO r
 convertRow fromRow_ rowRes ncols = do
-  let rw = RowParseRO ncols
-  case runStateT (runReaderT (unRP fromRow_) rw) (0, rowRes) of
+  let rw = RowParserRO ncols
+  case runRowParser fromRow_ rw (0, rowRes) of
     Ok (val, (col, _))
       | col == ncols -> return val
       | otherwise -> errorColumnMismatch (ColumnOutOfBounds col)

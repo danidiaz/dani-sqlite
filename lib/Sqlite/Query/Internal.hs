@@ -27,13 +27,8 @@ module Sqlite.Query.Internal where
 import Control.Applicative
 import Control.Exception (Exception)
 import Control.Monad
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.State.Strict
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 ()
-import Data.IORef
-import Data.Typeable (Typeable)
-import Data.Word
 import Sqlite.Query.Ok
 import qualified Sqlite as Base
 
@@ -50,8 +45,8 @@ import qualified Sqlite as Base
 --     connectionTempNameCounter :: {-# UNPACK #-} !(IORef Word64)
 --   }
 
-data ColumnOutOfBounds = ColumnOutOfBounds {errorColumnIndex :: !Int}
-  deriving (Eq, Show, Typeable)
+newtype ColumnOutOfBounds = ColumnOutOfBounds {errorColumnIndex :: Int}
+  deriving (Eq, Show)
 
 instance Exception ColumnOutOfBounds
 
@@ -63,10 +58,49 @@ data Field = Field
 
 -- Named type for holding RowParser read-only state.  Just for making
 -- it easier to make sense out of types in FromRow.
-newtype RowParseRO = RowParseRO {nColumns :: Int}
+newtype RowParserRO = RowParserRO {nColumns :: Int}
 
-newtype RowParser a = RP {unRP :: ReaderT RowParseRO (StateT (Int, [Base.SqlData]) Ok) a}
-  deriving (Functor, Applicative, Alternative, Monad, MonadPlus)
+type RowParserState = (Int, [Base.SqlData])
+
+newtype RowParser a = RowParser { runRowParser :: RowParserRO -> RowParserState -> Ok (a, RowParserState) }
+  deriving Functor
+
+instance Applicative RowParser where
+  pure a = RowParser $ \_ s -> pure (a, s)
+  RowParser pf <*> RowParser pa = RowParser $ \ro s -> do
+    (f, s') <- pf ro s
+    (a, s'') <- pa ro s'
+    pure (f a, s'')
+
+instance Alternative RowParser where
+  empty = RowParser $ \_ _ -> empty
+  RowParser p1 <|> RowParser p2 = RowParser $ \ro s -> p1 ro s <|> p2 ro s
+
+instance Monad RowParser where
+  RowParser pa >>= f = RowParser $ \ro s -> do
+    (a, s') <- pa ro s
+    runRowParser (f a) ro s'
+
+instance MonadPlus RowParser where
+  mzero = empty
+  mplus = (<|>)
+
+-- | Get the read-only RowParseRO environment.
+asksRowParserRO :: (RowParserRO -> a) -> RowParser a
+asksRowParserRO f = RowParser $ \ro s -> pure (f ro, s)
+
+-- | Get the current RowParserState.
+getRowParserState :: RowParser RowParserState
+getRowParserState = RowParser $ \_ s -> pure (s, s)
+
+-- | Set the RowParserState.
+putRowParserState :: RowParserState -> RowParser ()
+putRowParserState s = RowParser $ \_ _ -> pure ((), s)
+
+liftOk :: Ok a -> RowParser a
+liftOk oka = RowParser $ \_ s -> do
+  a <- oka
+  pure (a, s)
 
 gettypename :: Base.SqlData -> ByteString
 gettypename (Base.SqlInteger _) = "INTEGER"
