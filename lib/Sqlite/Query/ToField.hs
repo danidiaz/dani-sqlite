@@ -1,6 +1,9 @@
 {-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
 -- |
 -- Module:      Database.Sqlite.Simple.ToField
 -- Copyright:   (c) 2011 MailRank, Inc.
@@ -12,154 +15,150 @@
 --
 -- The 'ToField' typeclass, for rendering a parameter to an Sqlite
 -- value to be bound as a Sql query parameter.
---
-------------------------------------------------------------------------------
+module Sqlite.Query.ToField (ToField (..)) where
 
-module Sqlite.Query.ToField (ToField(..)) where
-
-import qualified Data.ByteString as SB
-import qualified Data.ByteString.Lazy as LB
-import           Data.Int (Int8, Int16, Int32, Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
-import           Data.Word (Word8, Word16, Word32, Word64)
-import           GHC.Float
-
-import           Sqlite as Base
-import           Sqlite.Query.Types (Null)
+import Data.ByteString qualified as SB
+import Data.ByteString.Lazy qualified as LB
+import Data.Int (Int16, Int32, Int64, Int8)
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT
+import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Float
+import Sqlite as Base
+import Sqlite.Query.Types (Null)
 
 -- | A type that may be used as a single parameter to a Sql query.
 class ToField a where
-    toField :: a -> SqlData
-    -- ^ Prepare a value for substitution into a query string.
+  toField :: a -> SqlData
+  -- ^ Prepare a value for substitution into a query string.
 
 instance ToField SqlData where
-    toField a = a
-    {-# INLINE toField #-}
+  toField a = a
+  {-# INLINE toField #-}
 
 instance (ToField a) => ToField (Maybe a) where
-    toField Nothing  = Base.SqlNull
-    toField (Just a) = toField a
-    {-# INLINE toField #-}
+  toField Nothing = Base.SqlNull
+  toField (Just a) = toField a
+  {-# INLINE toField #-}
 
 instance ToField Null where
-    toField _ = Base.SqlNull
-    {-# INLINE toField #-}
+  toField _ = Base.SqlNull
+  {-# INLINE toField #-}
 
 instance ToField Bool where
-    toField False = SqlInteger 0
-    toField True  = SqlInteger 1
-    {-# INLINE toField #-}
+  toField False = SqlInteger 0
+  toField True = SqlInteger 1
+  {-# INLINE toField #-}
 
 instance ToField Int8 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Int16 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Int32 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Int where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Int64 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Integer where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Word8 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Word16 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Word32 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Word where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Word64 where
-    toField = SqlInteger . fromIntegral
-    {-# INLINE toField #-}
+  toField = SqlInteger . fromIntegral
+  {-# INLINE toField #-}
 
 instance ToField Float where
-    toField = SqlFloat . float2Double
-    {-# INLINE toField #-}
+  toField = SqlFloat . float2Double
+  {-# INLINE toField #-}
 
 instance ToField Double where
-    toField = SqlFloat
-    {-# INLINE toField #-}
+  toField = SqlFloat
+  {-# INLINE toField #-}
 
 instance ToField SB.ByteString where
-    toField = SqlBlob
-    {-# INLINE toField #-}
+  toField = SqlBlob
+  {-# INLINE toField #-}
 
 instance ToField LB.ByteString where
-    toField = toField . SB.concat . LB.toChunks
-    {-# INLINE toField #-}
+  toField = toField . SB.concat . LB.toChunks
+  {-# INLINE toField #-}
 
 instance ToField T.Text where
-    toField = SqlText
-    {-# INLINE toField #-}
+  toField = SqlText
+  {-# INLINE toField #-}
 
 instance ToField [Char] where
-    toField = SqlText . T.pack
-    {-# INLINE toField #-}
+  toField = SqlText . T.pack
+  {-# INLINE toField #-}
 
 instance ToField LT.Text where
-    toField = toField . LT.toStrict
-    {-# INLINE toField #-}
+  toField = toField . LT.toStrict
+  {-# INLINE toField #-}
 
 -- instance ToField UTCTime where
 --     toField = SqlText . T.decodeUtf8 . toByteString . utcTimeToBuilder
 --     {-# INLINE toField #-}
--- 
+--
 -- instance ToField Day where
 --     toField = SqlText . T.decodeUtf8 . toByteString . dayToBuilder
 --     {-# INLINE toField #-}
 
 -- TODO enable these
---instance ToField ZonedTime where
+-- instance ToField ZonedTime where
 --    toField = SqlText . zonedTimeToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField LocalTime where
+-- instance ToField LocalTime where
 --    toField = SqlText . localTimeToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField Day where
+-- instance ToField Day where
 --    toField = SqlText . dayToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField TimeOfDay where
+-- instance ToField TimeOfDay where
 --    toField = SqlText . timeOfDayToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField UTCTimestamp where
+-- instance ToField UTCTimestamp where
 --    toField = SqlText . utcTimestampToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField ZonedTimestamp where
+-- instance ToField ZonedTimestamp where
 --    toField = SqlText . zonedTimestampToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField LocalTimestamp where
+-- instance ToField LocalTimestamp where
 --    toField = SqlText . localTimestampToBuilder
 --    {-# INLINE toField #-}
 --
---instance ToField Date where
+-- instance ToField Date where
 --    toField = SqlText . dateToBuilder
 --    {-# INLINE toField #-}

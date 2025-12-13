@@ -1,6 +1,9 @@
 {-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
 -- |
 -- Module:     Database.Sqlite.Simple.Ok
 -- Copyright:  (c) 2012 Leon P Smith
@@ -23,59 +26,54 @@
 -- throw away the other,  and have 'empty' provide a generic exception,
 -- this avoids cases where 'empty' overrides a more informative exception
 -- and allows you to see all the different ways your computation has failed.
---
-------------------------------------------------------------------------------
-
 module Sqlite.Query.Ok where
 
 import Control.Applicative
 import Control.Exception
-import Control.Monad (MonadPlus(..))
+import Control.Monad (MonadPlus (..))
 
 -- FIXME:   [SomeException] should probably be something else,  maybe
 --          a difference list (or a tree?)
 
 data Ok a = Errors [SomeException] | Ok !a
-    deriving(Show, Functor)
+  deriving (Show, Functor)
 
 -- | Two 'Errors' cases are considered equal, regardless of what the
 --   list of exceptions looks like.
-
-instance Eq a => Eq (Ok a) where
-    Errors _ == Errors _  = True
-    Ok  a    == Ok  b     = a == b
-    _        == _         = False
+instance (Eq a) => Eq (Ok a) where
+  Errors _ == Errors _ = True
+  Ok a == Ok b = a == b
+  _ == _ = False
 
 instance Applicative Ok where
-    pure = Ok
+  pure = Ok
 
-    Errors es <*> _ = Errors es
-    _ <*> Errors es = Errors es
-    Ok f <*> Ok a   = Ok (f a)
+  Errors es <*> _ = Errors es
+  _ <*> Errors es = Errors es
+  Ok f <*> Ok a = Ok (f a)
 
 instance Alternative Ok where
-    empty = Errors []
+  empty = Errors []
 
-    a@(Ok _)  <|> _         = a
-    Errors _  <|> b@(Ok _)  = b
-    Errors as <|> Errors bs = Errors (as ++ bs)
+  a@(Ok _) <|> _ = a
+  Errors _ <|> b@(Ok _) = b
+  Errors as <|> Errors bs = Errors (as ++ bs)
 
 instance MonadPlus Ok where
-    mzero = empty
-    mplus = (<|>)
+  mzero = empty
+  mplus = (<|>)
 
 instance Monad Ok where
-    return = pure
+  return = pure
 
-    Errors es >>= _ = Errors es
-    Ok a      >>= f = f a
+  Errors es >>= _ = Errors es
+  Ok a >>= f = f a
 
 instance MonadFail Ok where
-    fail str = Errors [SomeException (ErrorCall str)]
+  fail str = Errors [SomeException (ErrorCall str)]
 
 -- | a way to reify a list of exceptions into a single exception
-
 newtype ManyErrors = ManyErrors [SomeException]
-   deriving (Show)
+  deriving (Show)
 
 instance Exception ManyErrors

@@ -2,6 +2,9 @@
 {-# LANGUAGE DefaultSignatures #-}
 
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
 -- |
 -- Module:      Database.Sqlite.Simple.FromRow
 -- Copyright:   (c) 2011-2012 Leon P Smith
@@ -15,26 +18,23 @@
 --
 -- Predefined instances are provided for tuples containing up to ten
 -- elements.
-------------------------------------------------------------------------------
-
 module Sqlite.Query.FromRow
-     ( GFromRow(..)
-     , FromRow(..)
-     , RowParser
-     , field
-     , fieldWith
-     , numFieldsRemaining
-     ) where
+  ( GFromRow (..),
+    FromRow (..),
+    RowParser,
+    field,
+    fieldWith,
+    numFieldsRemaining,
+  )
+where
 
-import           Control.Exception (SomeException(..))
-import           Control.Monad (replicateM)
-import           GHC.Generics
-
-import           Sqlite.Query.FromField
-import           Sqlite.Query.Internal
-import           Sqlite.Query.Ok
-import           Sqlite.Query.Types
-
+import Control.Exception (SomeException (..))
+import Control.Monad (replicateM)
+import GHC.Generics
+import Sqlite.Query.FromField
+import Sqlite.Query.Internal
+import Sqlite.Query.Ok
+import Sqlite.Query.Types
 
 -- | Generic derivation of 'FromRow'.
 --
@@ -58,10 +58,10 @@ class GFromRow f where
 instance GFromRow U1 where
   gfromRow = pure U1
 
-instance FromField a => GFromRow (K1 i a) where
+instance (FromField a) => GFromRow (K1 i a) where
   gfromRow = K1 <$> field
 
-instance GFromRow a => GFromRow (M1 i c a) where
+instance (GFromRow a) => GFromRow (M1 i c a) where
   gfromRow = M1 <$> gfromRow
 
 instance (GFromRow a, GFromRow b) => GFromRow (a :*: b) where
@@ -105,84 +105,172 @@ instance (GFromRow a, GFromRow b) => GFromRow (a :*: b) where
 --
 -- For more details refer to 'GFromRow'.
 class FromRow a where
-    fromRow :: RowParser a
-
-    default fromRow :: Generic a => GFromRow (Rep a) => RowParser a
-    fromRow = to <$> gfromRow
+  fromRow :: RowParser a
+  default fromRow :: (Generic a) => (GFromRow (Rep a)) => RowParser a
+  fromRow = to <$> gfromRow
 
 fieldWith :: FieldParser a -> RowParser a
 fieldWith fieldP = do
-    ncols <- asksRowParserRO nColumns
-    (column, remaining) <- getRowParserState
-    putRowParserState (column + 1, tail remaining)
-    if column >= ncols
+  ncols <- asksRowParserRO nColumns
+  (column, remaining) <- getRowParserState
+  putRowParserState (column + 1, tail remaining)
+  if column >= ncols
     then
-      liftOk (Errors [SomeException (ColumnOutOfBounds (column+1))])
+      liftOk (Errors [SomeException (ColumnOutOfBounds (column + 1))])
     else do
       let r = head remaining
           field' = Field r column
       liftOk (fieldP field')
 
-field :: FromField a => RowParser a
+field :: (FromField a) => RowParser a
 field = fieldWith fromField
 
 numFieldsRemaining :: RowParser Int
 numFieldsRemaining = do
   ncols <- asksRowParserRO nColumns
-  (columnIdx,_) <- getRowParserState
+  (columnIdx, _) <- getRowParserState
   return $! ncols - columnIdx
 
 instance (FromField a) => FromRow (Solo a) where
-    fromRow = MkSolo <$> field
+  fromRow = MkSolo <$> field
 
-instance (FromField a, FromField b) => FromRow (a,b) where
-    fromRow = (,) <$> field <*> field
+instance (FromField a, FromField b) => FromRow (a, b) where
+  fromRow = (,) <$> field <*> field
 
-instance (FromField a, FromField b, FromField c) => FromRow (a,b,c) where
-    fromRow = (,,) <$> field <*> field <*> field
+instance (FromField a, FromField b, FromField c) => FromRow (a, b, c) where
+  fromRow = (,,) <$> field <*> field <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d) =>
-    FromRow (a,b,c,d) where
-    fromRow = (,,,) <$> field <*> field <*> field <*> field
+instance
+  (FromField a, FromField b, FromField c, FromField d) =>
+  FromRow (a, b, c, d)
+  where
+  fromRow = (,,,) <$> field <*> field <*> field <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e) =>
-    FromRow (a,b,c,d,e) where
-    fromRow = (,,,,) <$> field <*> field <*> field <*> field <*> field
+instance
+  (FromField a, FromField b, FromField c, FromField d, FromField e) =>
+  FromRow (a, b, c, d, e)
+  where
+  fromRow = (,,,,) <$> field <*> field <*> field <*> field <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e,
-          FromField f) =>
-    FromRow (a,b,c,d,e,f) where
-    fromRow = (,,,,,) <$> field <*> field <*> field <*> field <*> field
-                      <*> field
+instance
+  ( FromField a,
+    FromField b,
+    FromField c,
+    FromField d,
+    FromField e,
+    FromField f
+  ) =>
+  FromRow (a, b, c, d, e, f)
+  where
+  fromRow =
+    (,,,,,)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e,
-          FromField f, FromField g) =>
-    FromRow (a,b,c,d,e,f,g) where
-    fromRow = (,,,,,,) <$> field <*> field <*> field <*> field <*> field
-                       <*> field <*> field
+instance
+  ( FromField a,
+    FromField b,
+    FromField c,
+    FromField d,
+    FromField e,
+    FromField f,
+    FromField g
+  ) =>
+  FromRow (a, b, c, d, e, f, g)
+  where
+  fromRow =
+    (,,,,,,)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e,
-          FromField f, FromField g, FromField h) =>
-    FromRow (a,b,c,d,e,f,g,h) where
-    fromRow = (,,,,,,,) <$> field <*> field <*> field <*> field <*> field
-                        <*> field <*> field <*> field
+instance
+  ( FromField a,
+    FromField b,
+    FromField c,
+    FromField d,
+    FromField e,
+    FromField f,
+    FromField g,
+    FromField h
+  ) =>
+  FromRow (a, b, c, d, e, f, g, h)
+  where
+  fromRow =
+    (,,,,,,,)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e,
-          FromField f, FromField g, FromField h, FromField i) =>
-    FromRow (a,b,c,d,e,f,g,h,i) where
-    fromRow = (,,,,,,,,) <$> field <*> field <*> field <*> field <*> field
-                         <*> field <*> field <*> field <*> field
+instance
+  ( FromField a,
+    FromField b,
+    FromField c,
+    FromField d,
+    FromField e,
+    FromField f,
+    FromField g,
+    FromField h,
+    FromField i
+  ) =>
+  FromRow (a, b, c, d, e, f, g, h, i)
+  where
+  fromRow =
+    (,,,,,,,,)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
 
-instance (FromField a, FromField b, FromField c, FromField d, FromField e,
-          FromField f, FromField g, FromField h, FromField i, FromField j) =>
-    FromRow (a,b,c,d,e,f,g,h,i,j) where
-    fromRow = (,,,,,,,,,) <$> field <*> field <*> field <*> field <*> field
-                          <*> field <*> field <*> field <*> field <*> field
+instance
+  ( FromField a,
+    FromField b,
+    FromField c,
+    FromField d,
+    FromField e,
+    FromField f,
+    FromField g,
+    FromField h,
+    FromField i,
+    FromField j
+  ) =>
+  FromRow (a, b, c, d, e, f, g, h, i, j)
+  where
+  fromRow =
+    (,,,,,,,,,)
+      <$> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
+      <*> field
 
-instance FromField a => FromRow [a] where
-    fromRow = do
-      n <- numFieldsRemaining
-      replicateM n field
+instance (FromField a) => FromRow [a] where
+  fromRow = do
+    n <- numFieldsRemaining
+    replicateM n field
 
 instance (FromRow a, FromRow b) => FromRow (a :. b) where
-    fromRow = (:.) <$> fromRow <*> fromRow
+  fromRow = (:.) <$> fromRow <*> fromRow

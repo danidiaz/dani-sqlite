@@ -1,37 +1,39 @@
-{-# LANGUAGE ScopedTypeVariables #-} 
-{-# LANGUAGE OverloadedStrings #-} 
-{-# LANGUAGE CPP #-} 
-{-# LANGUAGE RecordWildCards #-} 
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 #if MIN_VERSION_base(4,9,0)
 {-# OPTIONS_GHC -Wno-overflowed-literals #-}
 #endif
 
-module ParamConv (
-    testParamConvNull
-  , testParamConvInt
-  , testParamConvIntWidths
-  , testParamConvIntWidthsFromField
-  , testParamConvFloat
-  , testParamConvBools
-  , testParamConvFromRow
-  , testParamConvToRow
-  , testParamConvComposite
-  , testParamNamed) where
+module ParamConv
+  ( testParamConvNull,
+    testParamConvInt,
+    testParamConvIntWidths,
+    testParamConvIntWidthsFromField,
+    testParamConvFloat,
+    testParamConvBools,
+    testParamConvFromRow,
+    testParamConvToRow,
+    testParamConvComposite,
+    testParamNamed,
+  )
+where
 
-import           Data.Int
-import           Data.Word
-import qualified Data.Text as T
-import Sqlite.Query.Types (Null(..))
 import Common
+import Data.Int
+import Data.Text qualified as T
+import Data.Word
+import Sqlite.Query.Types (Null (..))
 
 one, two, three :: Int
-one   = 1
-two   = 2
+one = 1
+two = 2
 three = 3
 
 testParamConvNull :: TestEnv -> Test
-testParamConvNull TestEnv{..} = TestCase $ do
+testParamConvNull TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE nulltype (id INTEGER PRIMARY KEY, t1 TEXT)"
   [MkSolo r] <- (select_ conn "SELECT NULL") :: IO [Solo Null]
   execute conn "INSERT INTO nulltype (id, t1) VALUES (?,?)" (one, r)
@@ -42,7 +44,7 @@ testParamConvNull TestEnv{..} = TestCase $ do
   assertEqual "nulls" (Just "foo") mr2
 
 testParamConvInt :: TestEnv -> Test
-testParamConvInt TestEnv{..} = TestCase $ do
+testParamConvInt TestEnv {..} = TestCase $ do
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo one)) :: IO [Solo Int]
   assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo one)) :: IO [Solo Integer]
@@ -57,11 +59,15 @@ testParamConvInt TestEnv{..} = TestCase $ do
   assertEqual "value" 16 r
   -- This overflows 32-bit ints, verify that we get more than 32-bits out
   [MkSolo r] <- (select conn "SELECT 255*?" (MkSolo (0x7FFFFFFF :: Int32))) :: IO [Solo Int64]
-  assertEqual "> 32-bit result"
-    (255*0x7FFFFFFF :: Int64) (fromIntegral r)
+  assertEqual
+    "> 32-bit result"
+    (255 * 0x7FFFFFFF :: Int64)
+    (fromIntegral r)
   [MkSolo r] <- (select conn "SELECT 2*?" (MkSolo (0x7FFFFFFFFF :: Int64))) :: IO [Solo Int64]
-  assertEqual "> 32-bit result & param"
-    (2*0x7FFFFFFFFF :: Int64) (fromIntegral r)
+  assertEqual
+    "> 32-bit result & param"
+    (2 * 0x7FFFFFFFFF :: Int64)
+    (fromIntegral r)
   [MkSolo r] <- (select_ conn "SELECT NULL") :: IO [Solo (Maybe Int)]
   assertEqual "should see nothing" Nothing r
   [MkSolo r] <- (select_ conn "SELECT 3") :: IO [Solo (Maybe Int)]
@@ -72,7 +78,7 @@ testParamConvInt TestEnv{..} = TestCase $ do
   assertEqual "should see 4" (Just 3) r
 
 testParamConvIntWidths :: TestEnv -> Test
-testParamConvIntWidths TestEnv{..} = TestCase $ do
+testParamConvIntWidths TestEnv {..} = TestCase $ do
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int8))) :: IO [Solo Int]
   assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int8))) :: IO [Solo Int] -- wrap around
@@ -97,7 +103,7 @@ testParamConvIntWidths TestEnv{..} = TestCase $ do
   assertEqual "value" 1 r
 
 testParamConvIntWidthsFromField :: TestEnv -> Test
-testParamConvIntWidthsFromField TestEnv{..} = TestCase $ do
+testParamConvIntWidthsFromField TestEnv {..} = TestCase $ do
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int))) :: IO [Solo Int8]
   assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int))) :: IO [Solo Int8] -- wrap around
@@ -122,14 +128,14 @@ testParamConvIntWidthsFromField TestEnv{..} = TestCase $ do
   assertEqual "value" 1 r
 
 testParamConvFloat :: TestEnv -> Test
-testParamConvFloat TestEnv{..} = TestCase $ do
+testParamConvFloat TestEnv {..} = TestCase $ do
   [MkSolo r] <- select conn "SELECT ?" (MkSolo (1.0 :: Double)) :: IO [Solo Double]
   assertEqual "value" 1.0 r
   [MkSolo r] <- select conn "SELECT ?*0.25" (MkSolo (8.0 :: Double)) :: IO [Solo Double]
   assertEqual "value" 2.0 r
 
 testParamConvBools :: TestEnv -> Test
-testParamConvBools TestEnv{..} = TestCase $ do
+testParamConvBools TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE bt (id INTEGER PRIMARY KEY, b BOOLEAN)"
   -- Booleans are ints with values 0 or 1 on Sqlite
   execute_ conn "INSERT INTO bt (b) VALUES (0)"
@@ -147,49 +153,62 @@ testParamConvBools TestEnv{..} = TestCase $ do
   assertEqual "bool" False r5
 
 testParamConvFromRow :: TestEnv -> Test
-testParamConvFromRow TestEnv{..} = TestCase $ do
-  [(1,2)] <- select_ conn "SELECT 1,2" :: IO [(Int,Int)]
-  [(1,2,3)] <- select_ conn "SELECT 1,2,3" :: IO [(Int,Int,Int)]
-  [(1,2,3,4)] <- select_ conn "SELECT 1,2,3,4" :: IO [(Int,Int,Int,Int)]
-  [(1,2,3,4,5)] <- select_ conn "SELECT 1,2,3,4,5" :: IO [(Int,Int,Int,Int,Int)]
-  [(1,2,3,4,5,6)] <- select_ conn "SELECT 1,2,3,4,5,6" :: IO [(Int,Int,Int,Int,Int,Int)]
-  [(1,2,3,4,5,6,7)] <- select_ conn "SELECT 1,2,3,4,5,6,7" :: IO [(Int,Int,Int,Int,Int,Int,Int)]
-  [(1,2,3,4,5,6,7,8)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8" :: IO [(Int,Int,Int,Int,Int,Int,Int,Int)]
-  [(1,2,3,4,5,6,7,8,9)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8,9" :: IO [(Int,Int,Int,Int,Int,Int,Int,Int,Int)]
-  [(1,2,3,4,5,6,7,8,9,10)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8,9,10" :: IO [(Int,Int,Int,Int,Int,Int,Int,Int,Int,Int)]
-  [[1,2,3]] <- select_ conn "SELECT 1,2,3" :: IO [[Int]]
+testParamConvFromRow TestEnv {..} = TestCase $ do
+  [(1, 2)] <- select_ conn "SELECT 1,2" :: IO [(Int, Int)]
+  [(1, 2, 3)] <- select_ conn "SELECT 1,2,3" :: IO [(Int, Int, Int)]
+  [(1, 2, 3, 4)] <- select_ conn "SELECT 1,2,3,4" :: IO [(Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5)] <- select_ conn "SELECT 1,2,3,4,5" :: IO [(Int, Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5, 6)] <- select_ conn "SELECT 1,2,3,4,5,6" :: IO [(Int, Int, Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5, 6, 7)] <- select_ conn "SELECT 1,2,3,4,5,6,7" :: IO [(Int, Int, Int, Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5, 6, 7, 8)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8" :: IO [(Int, Int, Int, Int, Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5, 6, 7, 8, 9)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8,9" :: IO [(Int, Int, Int, Int, Int, Int, Int, Int, Int)]
+  [(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)] <- select_ conn "SELECT 1,2,3,4,5,6,7,8,9,10" :: IO [(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int)]
+  [[1, 2, 3]] <- select_ conn "SELECT 1,2,3" :: IO [[Int]]
   return ()
 
 testParamConvToRow :: TestEnv -> Test
-testParamConvToRow TestEnv{..} = TestCase $ do
+testParamConvToRow TestEnv {..} = TestCase $ do
   [MkSolo (s :: Int)] <- select conn "SELECT 13" ()
   13 @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?" (MkSolo one)
   1 @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?+?" (one, two)
-  (1+2) @=? s
+  (1 + 2) @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?" (one, two, three)
-  (1+2+3) @=? s
+  (1 + 2 + 3) @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?" (one, two, three, 4 :: Int)
-  (1+2+3+4) @=? s
+  (1 + 2 + 3 + 4) @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?" (one, two, three, 4 :: Int, 5 :: Int)
-  (1+2+3+4+5) @=? s
+  (1 + 2 + 3 + 4 + 5) @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?+?" (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int)
-  (1+2+3+4+5+6) @=? s
-  [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?+?+?"
-                         (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int)
-  (1+2+3+4+5+6+7) @=? s
-  [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?+?+?+?"
-                         (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int)
-  (1+2+3+4+5+6+7+8) @=? s
-  [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?+?+?+?+?"
-                         (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int, 9 :: Int)
-  (1+2+3+4+5+6+7+8+9) @=? s
-  [MkSolo (s :: Int)] <- select conn "SELECT ?+?+?+?+?+?+?+?+?+?"
-                         (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int, 9 :: Int, 10 :: Int)
-  (1+2+3+4+5+6+7+8+9+10) @=? s
+  (1 + 2 + 3 + 4 + 5 + 6) @=? s
+  [MkSolo (s :: Int)] <-
+    select
+      conn
+      "SELECT ?+?+?+?+?+?+?"
+      (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int)
+  (1 + 2 + 3 + 4 + 5 + 6 + 7) @=? s
+  [MkSolo (s :: Int)] <-
+    select
+      conn
+      "SELECT ?+?+?+?+?+?+?+?"
+      (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int)
+  (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8) @=? s
+  [MkSolo (s :: Int)] <-
+    select
+      conn
+      "SELECT ?+?+?+?+?+?+?+?+?"
+      (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int, 9 :: Int)
+  (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9) @=? s
+  [MkSolo (s :: Int)] <-
+    select
+      conn
+      "SELECT ?+?+?+?+?+?+?+?+?+?"
+      (one, two, three, 4 :: Int, 5 :: Int, 6 :: Int, 7 :: Int, 8 :: Int, 9 :: Int, 10 :: Int)
+  (1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10) @=? s
 
-data TestTuple  = TestTuple  Int64 Int64 deriving (Eq, Show)
+data TestTuple = TestTuple Int64 Int64 deriving (Eq, Show)
+
 data TestTuple2 = TestTuple2 T.Text T.Text deriving (Eq, Show)
 
 instance FromRow TestTuple where
@@ -205,7 +224,7 @@ instance ToRow TestTuple2 where
   toRow (TestTuple2 a b) = [SqlText a, SqlText b]
 
 testParamConvComposite :: TestEnv -> Test
-testParamConvComposite TestEnv{..} = TestCase $ do
+testParamConvComposite TestEnv {..} = TestCase $ do
   [t1] <- select_ conn "SELECT 1,2"
   TestTuple 1 2 @=? t1
   [t2] <- select_ conn "SELECT 'foo','bar'"
@@ -219,10 +238,10 @@ testParamConvComposite TestEnv{..} = TestCase $ do
   w @=? "xyzz"
 
 testParamNamed :: TestEnv -> Test
-testParamNamed TestEnv{..} = TestCase $ do
+testParamNamed TestEnv {..} = TestCase $ do
   [MkSolo t1] <- selectNamed conn "SELECT :foo / :bar" [":foo" := two, ":bar" := one]
   t1 @=? (2 :: Int)
-  [(t1,t2)] <- selectNamed conn "SELECT :foo,:bar" [":foo" := ("foo" :: T.Text), ":bar" := one]
+  [(t1, t2)] <- selectNamed conn "SELECT :foo,:bar" [":foo" := ("foo" :: T.Text), ":bar" := one]
   t1 @=? ("foo" :: T.Text)
   t2 @=? one
   execute_ conn "CREATE TABLE np (id INTEGER PRIMARY KEY, b BOOLEAN)"

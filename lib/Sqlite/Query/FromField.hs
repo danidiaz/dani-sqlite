@@ -1,6 +1,9 @@
 {-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+
 -- |
 -- Module:      Database.Sqlite.Simple.FromField
 -- Copyright:   (c) 2011 MailRank, Inc.
@@ -19,139 +22,141 @@
 -- @Int@ type because it can represent a @Int@ exactly. On the other hand,
 -- since a 'Double' might lose precision if representing a 64-bit @BigInt@,
 -- the two are /not/ considered compatible.
---
-------------------------------------------------------------------------------
-
 module Sqlite.Query.FromField
-    (
-      FromField(..)
-    , FieldParser
-    , ResultError(..)
-    , Field
-    , fieldData
-    , returnError
-    ) where
+  ( FromField (..),
+    FieldParser,
+    ResultError (..),
+    Field,
+    fieldData,
+    returnError,
+  )
+where
 
-import           Control.Exception (SomeException(..), Exception)
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy as LB
-import           Data.Int (Int8, Int16, Int32, Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
-import           Data.Typeable (Typeable, typeOf)
-import           Data.Word (Word8, Word16, Word32, Word64)
-import           GHC.Float (double2Float)
-
-import           Sqlite as Base
-import           Sqlite.Query.Types
-import           Sqlite.Query.Internal
-import           Sqlite.Query.Ok
+import Control.Exception (Exception, SomeException (..))
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as B
+import Data.ByteString.Lazy qualified as LB
+import Data.Int (Int16, Int32, Int64, Int8)
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT
+import Data.Typeable (Typeable, typeOf)
+import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Float (double2Float)
+import Sqlite as Base
+import Sqlite.Query.Internal
+import Sqlite.Query.Ok
+import Sqlite.Query.Types
 
 -- | Exception thrown if conversion from a Sql value to a Haskell
 -- value fails.
-data ResultError = Incompatible { errSqlType :: String
-                                , errHaskellType :: String
-                                , errMessage :: String }
-                 -- ^ The Sql and Haskell types are not compatible.
-                 | UnexpectedNull { errSqlType :: String
-                                  , errHaskellType :: String
-                                  , errMessage :: String }
-                 -- ^ A Sql @NULL@ was encountered when the Haskell
-                 -- type did not permit it.
-                 | ConversionFailed { errSqlType :: String
-                                    , errHaskellType :: String
-                                    , errMessage :: String }
-                 -- ^ The Sql value could not be parsed, or could not
-                 -- be represented as a valid Haskell value, or an
-                 -- unexpected low-level error occurred (e.g. mismatch
-                 -- between metadata and actual data in a row).
-                   deriving (Eq, Show)
+data ResultError
+  = -- | The Sql and Haskell types are not compatible.
+    Incompatible
+      { errSqlType :: String,
+        errHaskellType :: String,
+        errMessage :: String
+      }
+  | -- | A Sql @NULL@ was encountered when the Haskell
+    -- type did not permit it.
+    UnexpectedNull
+      { errSqlType :: String,
+        errHaskellType :: String,
+        errMessage :: String
+      }
+  | -- | The Sql value could not be parsed, or could not
+    -- be represented as a valid Haskell value, or an
+    -- unexpected low-level error occurred (e.g. mismatch
+    -- between metadata and actual data in a row).
+    ConversionFailed
+      { errSqlType :: String,
+        errHaskellType :: String,
+        errMessage :: String
+      }
+  deriving (Eq, Show)
 
 instance Exception ResultError
 
-left :: Exception a => a -> Ok b
-left = Errors . (:[]) . SomeException
+left :: (Exception a) => a -> Ok b
+left = Errors . (: []) . SomeException
 
 type FieldParser a = Field -> Ok a
 
 -- | A type that may be converted from a Sql type.
 class FromField a where
-    fromField :: FieldParser a
-    -- ^ Convert a Sql value to a Haskell value.
-    --
-    -- Returns a list of exceptions if the conversion fails.  In the case of
-    -- library instances,  this will usually be a single 'ResultError',  but
-    -- may be a 'UnicodeException'.
-    --
-    -- Implementations of 'fromField' should not retain any references to
-    -- the 'Field' nor the 'ByteString' arguments after the result has
-    -- been evaluated to WHNF.  Such a reference causes the entire
-    -- @LibPQ.'PQ.Result'@ to be retained.
-    --
-    -- For example,  the instance for 'ByteString' uses 'B.copy' to avoid
-    -- such a reference,  and that using bytestring functions such as 'B.drop'
-    -- and 'B.takeWhile' alone will also trigger this memory leak.
+  fromField :: FieldParser a
+  -- ^ Convert a Sql value to a Haskell value.
+  --
+  -- Returns a list of exceptions if the conversion fails.  In the case of
+  -- library instances,  this will usually be a single 'ResultError',  but
+  -- may be a 'UnicodeException'.
+  --
+  -- Implementations of 'fromField' should not retain any references to
+  -- the 'Field' nor the 'ByteString' arguments after the result has
+  -- been evaluated to WHNF.  Such a reference causes the entire
+  -- @LibPQ.'PQ.Result'@ to be retained.
+  --
+  -- For example,  the instance for 'ByteString' uses 'B.copy' to avoid
+  -- such a reference,  and that using bytestring functions such as 'B.drop'
+  -- and 'B.takeWhile' alone will also trigger this memory leak.
 
 instance (FromField a) => FromField (Maybe a) where
-    fromField (Field SqlNull _) = pure Nothing
-    fromField f                 = Just <$> fromField f
+  fromField (Field SqlNull _) = pure Nothing
+  fromField f = Just <$> fromField f
 
 instance FromField Null where
-    fromField (Field SqlNull _) = pure Null
-    fromField f                 = returnError ConversionFailed f "data is not null"
+  fromField (Field SqlNull _) = pure Null
+  fromField f = returnError ConversionFailed f "data is not null"
 
 takeInt :: (Num a, Typeable a) => Field -> Ok a
 takeInt (Field (SqlInteger i) _) = Ok . fromIntegral $ i
-takeInt f                        = returnError ConversionFailed f "need an int"
+takeInt f = returnError ConversionFailed f "need an int"
 
 instance FromField Int8 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Int16 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Int32 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Int where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Int64 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Integer where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Word8 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Word16 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Word32 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Word64 where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Word where
-    fromField = takeInt
+  fromField = takeInt
 
 instance FromField Double where
-    fromField (Field (SqlFloat flt) _) = Ok flt
-    fromField f                        = returnError ConversionFailed f "expecting an SqlFloat column type"
+  fromField (Field (SqlFloat flt) _) = Ok flt
+  fromField f = returnError ConversionFailed f "expecting an SqlFloat column type"
 
 instance FromField Float where
-    fromField (Field (SqlFloat flt) _) = Ok . double2Float $ flt
-    fromField f                        = returnError ConversionFailed f "expecting an SqlFloat column type"
+  fromField (Field (SqlFloat flt) _) = Ok . double2Float $ flt
+  fromField f = returnError ConversionFailed f "expecting an SqlFloat column type"
 
 instance FromField Bool where
-    fromField f@(Field (SqlInteger b) _)
-      | (b == 0) || (b == 1) = Ok (b /= 0)
-      | otherwise = returnError ConversionFailed f ("bool must be 0 or 1, got " ++ show b)
-
-    fromField f = returnError ConversionFailed f "expecting an SqlInteger column type"
+  fromField f@(Field (SqlInteger b) _)
+    | (b == 0) || (b == 1) = Ok (b /= 0)
+    | otherwise = returnError ConversionFailed f ("bool must be 0 or 1, got " ++ show b)
+  fromField f = returnError ConversionFailed f "expecting an SqlInteger column type"
 
 instance FromField T.Text where
   fromField f@(Field sqlData _) = case sqlData of
@@ -168,11 +173,11 @@ instance FromField [Char] where
 
 instance FromField ByteString where
   fromField (Field (SqlBlob blb) _) = Ok blb
-  fromField f                       = returnError ConversionFailed f "expecting SqlBlob column type"
+  fromField f = returnError ConversionFailed f "expecting SqlBlob column type"
 
 instance FromField LB.ByteString where
   fromField (Field (SqlBlob blb) _) = Ok . LB.fromChunks $ [blb]
-  fromField f                       = returnError ConversionFailed f "expecting SqlBlob column type"
+  fromField f = returnError ConversionFailed f "expecting SqlBlob column type"
 
 instance FromField SqlData where
   fromField :: FieldParser SqlData
@@ -191,8 +196,15 @@ fieldData = result
 --   and an 'errMessage',  this fills in the other fields in the
 --   exception value and returns it in a 'Left . SomeException'
 --   constructor.
-returnError :: forall a err . (Typeable a, Exception err)
-            => (String -> String -> String -> err)
-            -> Field -> String -> Ok a
-returnError mkErr f = left . mkErr (fieldTypename f)
-                                   (show (typeOf (undefined :: a)))
+returnError ::
+  forall a err.
+  (Typeable a, Exception err) =>
+  (String -> String -> String -> err) ->
+  Field ->
+  String ->
+  Ok a
+returnError mkErr f =
+  left
+    . mkErr
+      (fieldTypename f)
+      (show (typeOf (undefined :: a)))

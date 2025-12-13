@@ -183,7 +183,6 @@ import Sqlite.Direct
     bindParameterCount,
     blobBytes,
     changes,
-    totalChanges,
     clearBindings,
     columnBlob,
     columnCount,
@@ -203,6 +202,7 @@ import Sqlite.Direct
     getFuncContextConnection,
     interrupt,
     lastInsertRowId,
+    totalChanges,
   )
 import Sqlite.Direct qualified as Direct
 import Prelude hiding (error)
@@ -325,20 +325,19 @@ openV2 vfs flags mode path = do
   Direct.openV2 (toUtf8 <$> mvfs) flags mode (toUtf8 path)
     >>= checkErrorMsg ("openV2 " `appendShow` path)
 
-
 -- | Typical set of arguments for a connection pool.
--- https://www.sqlite.org/threadsafe.html 
--- SQLITE_OPEN_NOMUTEX flag causes the database connection to be in the multi-thread mode 
+-- https://www.sqlite.org/threadsafe.html
+-- SQLITE_OPEN_NOMUTEX flag causes the database connection to be in the multi-thread mode
 -- In this mode, SQLite can be safely used by multiple threads provided that no
 -- single database connection nor any object derived from database connection,
 -- such as a prepared statement, is used in two or more threads at the same
--- time. 
+-- time.
 openV2NoMutexReadWrite ::
   -- | Database filename.
   Text ->
   IO Connection
 openV2NoMutexReadWrite =
- Sqlite.openV2 DefaultVFS [OpenV2ExtendedResultCode, OpenV2NoMutex] OpenV2ReadWrite
+  Sqlite.openV2 DefaultVFS [OpenV2ExtendedResultCode, OpenV2NoMutex] OpenV2ReadWrite
 
 data VFS
   = DefaultVFS
@@ -348,7 +347,7 @@ data VFS
 -- | <https://www.sqlite.org/c3ref/close.html>
 close :: Connection -> IO ()
 close db = do
-  result <- Direct.close db 
+  result <- Direct.close db
   checkError (DetailConnection db) "close" result
 
 -- | Make it possible to interrupt the given database operation with an
@@ -463,7 +462,7 @@ prepareUtf8 db sql = do
 -- | <https://www.sqlite.org/c3ref/step.html>
 step :: PreparedStatement -> IO StepResult
 step statement = do
-  result <- Direct.step statement 
+  result <- Direct.step statement
   checkError (DetailStatement statement) "step" result
 
 -- | <https://www.sqlite.org/c3ref/step.html>
@@ -472,7 +471,7 @@ step statement = do
 -- functions (e.g. by using custom Sql functions).
 stepNoCB :: PreparedStatement -> IO StepResult
 stepNoCB statement = do
-  result <- Direct.stepNoCB statement 
+  result <- Direct.stepNoCB statement
   checkError (DetailStatement statement) "stepNoCB" result
 
 -- Note: sqlite3_reset and sqlite3_finalize return an error code if the most

@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
-module TestImports (
-    testImports
-  ) where
+
+module TestImports
+  ( testImports,
+  )
+where
 
 -- Test file to test that we can do most things with a single import
-import qualified Data.Text as T
 
-import           Common
-import           Sqlite
+import Common
 import Control.Exception
+import Data.Text qualified as T
+import Sqlite
 
 data TestType = TestType Int Int Int
 
@@ -22,7 +24,7 @@ test1 = do
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY, id2 INTEGER, id3 INTEGER)"
   execute_ conn "INSERT INTO testimp (id, id2, id3) VALUES (1, 2, 3)"
   [_v] <- select_ conn "SELECT * FROM testimp" :: IO [TestType]
-  [_v] <- select conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
+  [_v] <- select conn "SELECT ?+?" (3 :: Int, 4 :: Int) :: IO [(Solo Int)]
   close conn
 
 test2 :: Connection -> IO ()
@@ -36,7 +38,7 @@ test2 conn = do
 
 test3 :: Connection -> IO ()
 test3 conn = do
-  [_v] <- select conn "SELECT ?+?" (3::Int,4::Int) :: IO [(Solo Int)]
+  [_v] <- select conn "SELECT ?+?" (3 :: Int, 4 :: Int) :: IO [(Solo Int)]
   return ()
 
 testImports :: TestEnv -> Test

@@ -310,7 +310,6 @@ executeMany conn template paramRows = withStatement conn template $ \stmt -> do
       params
       (void . Sqlite.step $ stmt)
 
-
 -- | Perform a @SELECT@ or other Sql query that is expected to return
 -- results. All results are retrieved and converted before this
 -- function returns.
@@ -393,7 +392,7 @@ fold ::
   IO a
 fold conn query params action initalState =
   withStatementParams conn query params $ \stmt ->
-    doFold fromRow stmt action initalState 
+    doFold fromRow stmt action initalState
 
 doFoldToList :: RowParser row -> PreparedStatement -> IO [row]
 doFoldToList fromRow_ stmt =
@@ -409,7 +408,7 @@ fold_ ::
   IO a
 fold_ conn query action initalState =
   withStatement conn query $ \stmt ->
-    doFold fromRow stmt action initalState 
+    doFold fromRow stmt action initalState
 
 -- | A version of 'fold' where the query parameters (placeholders) are
 -- named.
@@ -423,12 +422,12 @@ foldNamed ::
   IO a
 foldNamed conn query params action initalState =
   withStatementNamedParams conn query params $ \stmt ->
-    doFold fromRow stmt action initalState 
+    doFold fromRow stmt action initalState
 
-foldPrepared :: (FromRow row) => PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
+foldPrepared :: (FromRow row) => PreparedStatement -> (a -> row -> IO a) -> IO a -> IO a
 foldPrepared = doFold fromRow
 
-doFold :: RowParser row -> PreparedStatement -> (a -> row -> IO a)  -> IO a -> IO a
+doFold :: RowParser row -> PreparedStatement -> (a -> row -> IO a) -> IO a -> IO a
 doFold fromRow_ stmt action initialAction = do
   initialValue <- initialAction
   loop initialValue

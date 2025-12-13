@@ -16,7 +16,7 @@ import Data.Text.Encoding.Error (UnicodeException (..))
 import Sqlite
 import Sqlite.Direct qualified as Direct
 import StrictEq
-import System.Directory (removeFile, doesFileExist)
+import System.Directory (doesFileExist, removeFile)
 import System.IO
 import System.IO.Error (isUserError)
 import System.Timeout (timeout)
@@ -289,10 +289,9 @@ testBind envIO = do
 testBindParamCounts :: IO TestEnv -> Assertion
 testBindParamCounts envIO = do
   TestEnv {..} <- envIO
-  let
-    testCase label query expected =
-      bracket (prepare conn query) finalize bindParameterCount
-        >>= assertEqual label expected
+  let testCase label query expected =
+        bracket (prepare conn query) finalize bindParameterCount
+          >>= assertEqual label expected
   testCase "single $a" "SELECT $a" 1
   testCase "3 unique ?NNNs" "SELECT (?1+?1+?1+?2+?3)" 3
   testCase "3 positional" "SELECT (?+?+?)" 3
@@ -749,23 +748,23 @@ testGetAutoCommit envIO = do
     Left (ErrorError, _) <- Direct.exec conn "ROLLBACK"
     True <- Direct.getAutoCommit conn
 
--- This commented (because it failed) test seems to check that after a "database
--- or disk is full" type of error, the transaction is rolled back and we return
--- to autocommit mode.
---
--- But the documentation seems to say that the rollback *might* happen in those
--- cases, not that it *always* happens:
--- https://www.sqlite.org/lang_transaction.html
--- https://www.sqlite.org/c3ref/get_autocommit.html  
---
---    exec conn "BEGIN"
---    False <- Direct.getAutoCommit conn
---    Left (ErrorFull, _) <-
---      Direct.exec
---        conn
---        "PRAGMA max_page_count=1; CREATE TABLE foo (a INT)"
---    True <- Direct.getAutoCommit conn
---    Left (ErrorError, _) <- Direct.exec conn "ROLLBACK"
+    -- This commented (because it failed) test seems to check that after a "database
+    -- or disk is full" type of error, the transaction is rolled back and we return
+    -- to autocommit mode.
+    --
+    -- But the documentation seems to say that the rollback *might* happen in those
+    -- cases, not that it *always* happens:
+    -- https://www.sqlite.org/lang_transaction.html
+    -- https://www.sqlite.org/c3ref/get_autocommit.html
+    --
+    --    exec conn "BEGIN"
+    --    False <- Direct.getAutoCommit conn
+    --    Left (ErrorFull, _) <-
+    --      Direct.exec
+    --        conn
+    --        "PRAGMA max_page_count=1; CREATE TABLE foo (a INT)"
+    --    True <- Direct.getAutoCommit conn
+    --    Left (ErrorError, _) <- Direct.exec conn "ROLLBACK"
 
     return ()
 
@@ -939,19 +938,18 @@ testOpenV2CanNotCreate filepathIO = do
     close db
   pure ()
 
-
 testExtendedResultCodes :: IO FilePath -> Assertion
 testExtendedResultCodes filepathIO = do
   filepath <- filepathIO
   db <- openV2 DefaultVFS [] OpenV2ReadWrite (T.pack filepath)
-  Left SqliteException {sqliteError = ErrorConstraint } <- try do
+  Left SqliteException {sqliteError = ErrorConstraint} <- try do
     exec
       db
       "CREATE TABLE test_ercs (t TEXT PRIMARY KEY); \
       \INSERT INTO test_ercs VALUES ('val1'); \
       \INSERT INTO test_ercs VALUES ('val1');"
   db <- openV2 DefaultVFS [OpenV2ExtendedResultCode] OpenV2ReadWrite (T.pack filepath)
-  Left SqliteException {sqliteError = ErrorConstraintPrimaryKey  } <- try do
+  Left SqliteException {sqliteError = ErrorConstraintPrimaryKey} <- try do
     exec
       db
       "CREATE TABLE test_ercs_2 (t TEXT PRIMARY KEY); \
@@ -959,19 +957,20 @@ testExtendedResultCodes filepathIO = do
       \INSERT INTO test_ercs_2 VALUES ('val1');"
   close db
 
-
 withDatabaseFile ::
-                FilePath -- ^ Parent directory to create the file in
-             -> String   -- ^ File name template
-             -> (FilePath -> IO ())
-             -> (IO FilePath -> TestTree) 
-             -> TestTree
+  -- | Parent directory to create the file in
+  FilePath ->
+  -- | File name template
+  String ->
+  (FilePath -> IO ()) ->
+  (IO FilePath -> TestTree) ->
+  TestTree
 withDatabaseFile dirpath template prepare =
   withResource allocFile deallocFile
-  where 
+  where
     allocFile = do
       (filepath, handle) <- openTempFile dirpath template
-      hClose handle 
+      hClose handle
       -- We only need the name. Tests will create the file, if needed.
       removeFile filepath
       prepare filepath
@@ -980,20 +979,20 @@ withDatabaseFile dirpath template prepare =
       exists <- doesFileExist filepath
       when exists $ removeFile filepath
 
-
 withTestEnv :: IO FilePath -> (IO TestEnv -> TestTree) -> TestTree
-withTestEnv tempDbFilePathIO = 
+withTestEnv tempDbFilePathIO =
   withResource allocEnv deallocEnv
   where
     allocEnv = do
       conn <- open ":memory:"
-      pure $ TestEnv {
-            conn,
+      pure $
+        TestEnv
+          { conn,
             withConn,
             withConnShared = \callback -> do
-              tempDbFilePath <- tempDbFilePathIO    
+              tempDbFilePath <- tempDbFilePathIO
               withConnPath (T.pack tempDbFilePath) callback
-        }
+          }
     deallocEnv TestEnv {conn} = do
       close conn
     withConn = withConnPath ":memory:"
@@ -1009,19 +1008,28 @@ withTestEnv tempDbFilePathIO =
 
 main :: IO ()
 main = do
-    defaultMain $
-      testGroup "All" [
-        withDatabaseFile "." "direct-sqlite-test-database" 
-          (\filepath ->  
-              do db <- open (T.pack filepath) 
-                 close db)
-          \tempDbNameIO -> 
+  defaultMain $
+    testGroup
+      "All"
+      [ withDatabaseFile
+          "."
+          "direct-sqlite-test-database"
+          ( \filepath ->
+              do
+                db <- open (T.pack filepath)
+                close db
+          )
+          \tempDbNameIO ->
             withTestEnv tempDbNameIO \envIO -> do
-              testGroup "OldTests" $ ($ envIO) <$> regressionTests
-        , withDatabaseFile "." "direct-sqlite-test-database-open-v2" 
-            (\_ -> pure ())
-            \tempDbNameIO -> testGroup "openV2" [
-              testCase "openV2 can't create if create mode not set" $ testOpenV2CanNotCreate tempDbNameIO,
-              testCase "extended result codes are returned when flag is set" $ testExtendedResultCodes tempDbNameIO
-                ]
-        ]
+              testGroup "OldTests" $ ($ envIO) <$> regressionTests,
+        withDatabaseFile
+          "."
+          "direct-sqlite-test-database-open-v2"
+          (\_ -> pure ())
+          \tempDbNameIO ->
+            testGroup
+              "openV2"
+              [ testCase "openV2 can't create if create mode not set" $ testOpenV2CanNotCreate tempDbNameIO,
+                testCase "extended result codes are returned when flag is set" $ testExtendedResultCodes tempDbNameIO
+              ]
+      ]

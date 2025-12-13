@@ -2,25 +2,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Query (
-    testSimpleOnePlusOne
-  , testSimpleSelect
-  , testSimpleParams
-  , testSimpleInsertId
-  , testSimpleMultiInsert
-  , testSimpleQueryCov
-  , testSimpleStrings
-  , testSimpleChanges
-  ) where
+module Query
+  ( testSimpleOnePlusOne,
+    testSimpleSelect,
+    testSimpleParams,
+    testSimpleInsertId,
+    testSimpleMultiInsert,
+    testSimpleQueryCov,
+    testSimpleStrings,
+    testSimpleChanges,
+  )
+where
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 -- orphan IsString instance in older byteString
-import           Data.ByteString.Lazy.Char8 ()
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 
-import           Common
+import Common
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Lazy.Char8 ()
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as LT
 
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
@@ -28,13 +29,13 @@ import Data.Monoid ((<>))
 
 -- Simplest SELECT
 testSimpleOnePlusOne :: TestEnv -> Test
-testSimpleOnePlusOne TestEnv{..} = TestCase $ do
+testSimpleOnePlusOne TestEnv {..} = TestCase $ do
   rows <- select_ conn "SELECT 1+1" :: IO [Solo Int]
   assertEqual "row count" 1 (length rows)
   assertEqual "value" (MkSolo 2) (head rows)
 
 testSimpleSelect :: TestEnv -> Test
-testSimpleSelect TestEnv{..} = TestCase $ do
+testSimpleSelect TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE test1 (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "INSERT INTO test1 (t) VALUES ('test string')"
   rows <- select_ conn "SELECT t FROM test1" :: IO [Solo String]
@@ -58,10 +59,10 @@ testSimpleSelect TestEnv{..} = TestCase $ do
   assertEqual "floats" 1.0 r
 
 testSimpleParams :: TestEnv -> Test
-testSimpleParams TestEnv{..} = TestCase $ do
+testSimpleParams TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE testparams (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "CREATE TABLE testparams2 (id INTEGER, t TEXT, t2 TEXT)"
-  [MkSolo i] <- select conn "SELECT ?" (MkSolo (42 :: Int))  :: IO [Solo Int]
+  [MkSolo i] <- select conn "SELECT ?" (MkSolo (42 :: Int)) :: IO [Solo Int]
   assertEqual "select int param" 42 i
   execute conn "INSERT INTO testparams (t) VALUES (?)" (MkSolo ("test string" :: String))
   rows <- select conn "SELECT t FROM testparams WHERE id = ?" (MkSolo (1 :: Int)) :: IO [Solo String]
@@ -83,7 +84,7 @@ testSimpleParams TestEnv{..} = TestCase $ do
   assertEqual "select double param" 4.0 f
 
 testSimpleInsertId :: TestEnv -> Test
-testSimpleInsertId TestEnv{..} = TestCase $ do
+testSimpleInsertId TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE test_row_id (id INTEGER PRIMARY KEY, t TEXT)"
   execute conn "INSERT INTO test_row_id (t) VALUES (?)" (MkSolo ("test string" :: String))
   id1 <- lastInsertRowId conn
@@ -92,13 +93,13 @@ testSimpleInsertId TestEnv{..} = TestCase $ do
   1 @=? id1
   2 @=? id2
   rows <- select conn "SELECT t FROM test_row_id WHERE id = ?" (MkSolo (1 :: Int)) :: IO [Solo String]
-  1 @=?  (length rows)
+  1 @=? (length rows)
   (MkSolo "test string") @=? (head rows)
   [MkSolo row] <- select conn "SELECT t FROM test_row_id WHERE id = ?" (MkSolo (2 :: Int)) :: IO [Solo String]
   "test2" @=? row
 
 testSimpleMultiInsert :: TestEnv -> Test
-testSimpleMultiInsert TestEnv{..} = TestCase $ do
+testSimpleMultiInsert TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE test_multi_insert (id INTEGER PRIMARY KEY, t1 TEXT, t2 TEXT)"
   executeMany conn "INSERT INTO test_multi_insert (t1, t2) VALUES (?, ?)" ([("foo", "bar"), ("baz", "bat")] :: [(String, String)])
   id2 <- lastInsertRowId conn
@@ -110,7 +111,7 @@ testSimpleMultiInsert TestEnv{..} = TestCase $ do
 testSimpleQueryCov :: TestEnv -> Test
 testSimpleQueryCov _ = TestCase $ do
   let str = "SELECT 1+1" :: T.Text
-      q   = "SELECT 1+1" :: Sql
+      q = "SELECT 1+1" :: Sql
   sqlText q @=? str
   show str @=? show q
   q @=? ((read . show $ q) :: Sql)
@@ -120,10 +121,10 @@ testSimpleQueryCov _ = TestCase $ do
   True @=? q <= q
 
 testSimpleStrings :: TestEnv -> Test
-testSimpleStrings TestEnv{..} = TestCase $ do
-  [MkSolo s] <- select_ conn "SELECT 'str1'"  :: IO [Solo T.Text]
+testSimpleStrings TestEnv {..} = TestCase $ do
+  [MkSolo s] <- select_ conn "SELECT 'str1'" :: IO [Solo T.Text]
   s @=? "str1"
-  [MkSolo s] <- select_ conn "SELECT 'strLazy'"  :: IO [Solo LT.Text]
+  [MkSolo s] <- select_ conn "SELECT 'strLazy'" :: IO [Solo LT.Text]
   s @=? "strLazy"
   [MkSolo s] <- select conn "SELECT ?" (MkSolo ("strP" :: T.Text)) :: IO [Solo T.Text]
   s @=? "strP"
@@ -139,7 +140,7 @@ testSimpleStrings TestEnv{..} = TestCase $ do
   s @=? "strBsPLazy2"
 
 testSimpleChanges :: TestEnv -> Test
-testSimpleChanges TestEnv{..} = TestCase $ do
+testSimpleChanges TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE testchanges (id INTEGER PRIMARY KEY, t TEXT)"
   execute conn "INSERT INTO testchanges(t) VALUES (?)" (MkSolo ("test string" :: String))
   numChanges <- changes conn

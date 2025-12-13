@@ -26,8 +26,8 @@ import Control.Exception (Exception)
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 ()
+import Sqlite qualified as Base
 import Sqlite.Query.Ok
-import qualified Sqlite as Base
 
 -- -- | Connection to an open database.
 -- --
@@ -59,8 +59,8 @@ newtype RowParserRO = RowParserRO {nColumns :: Int}
 
 type RowParserState = (Int, [Base.SqlData])
 
-newtype RowParser a = RowParser { runRowParser :: RowParserRO -> RowParserState -> Ok (a, RowParserState) }
-  deriving Functor
+newtype RowParser a = RowParser {runRowParser :: RowParserRO -> RowParserState -> Ok (a, RowParserState)}
+  deriving (Functor)
 
 instance Applicative RowParser where
   pure a = RowParser $ \_ s -> pure (a, s)
