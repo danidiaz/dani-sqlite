@@ -21,6 +21,8 @@ incorporated fork of sqlite-simple!
 
 Removed dependency on transformers.
 
+Removed dependency on exceptions.
+
 fork!
 
 pre-fork
