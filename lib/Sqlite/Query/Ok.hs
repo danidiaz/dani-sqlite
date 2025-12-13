@@ -34,7 +34,6 @@ module Sqlite.Query.Ok where
 import Control.Applicative
 import Control.Exception
 import Control.Monad (MonadPlus(..))
-import Control.Monad.Catch (MonadThrow, throwM)
 import Data.Typeable
 
 -- FIXME:   [SomeException] should probably be something else,  maybe
@@ -77,9 +76,6 @@ instance Monad Ok where
 
 instance MonadFail Ok where
     fail str = Errors [SomeException (ErrorCall str)]
-
-instance MonadThrow Ok where
-    throwM = fail . show
 
 -- | a way to reify a list of exceptions into a single exception
 
