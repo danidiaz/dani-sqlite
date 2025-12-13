@@ -107,7 +107,6 @@ import Control.Monad (forM_, void, when)
 import Data.Int (Int64)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Data.Typeable (Typeable)
 import Sqlite (ColumnIndex, PreparedStatement, SqlData)
 import Sqlite qualified
 import Sqlite.Direct (Connection)
@@ -142,7 +141,7 @@ data FormatError = FormatError
     fmtSql :: Sql,
     fmtParams :: [String]
   }
-  deriving (Eq, Show, Typeable)
+  deriving (Eq, Show)
 
 instance Exception FormatError
 
@@ -180,31 +179,28 @@ bind stmt params = do
             ("Only unnamed '?' query parameters are accepted, '" ++ T.unpack n ++ "' given")
             templ
             qp
-        Nothing -> return $! ()
+        Nothing -> return ()
 
 -- | Binds named parameters to a prepared statement.
 bindNamed :: PreparedStatement -> [NamedParam] -> IO ()
 bindNamed stmt params = do
   stmtParamCount <- Sqlite.bindParameterCount stmt
   when (length params /= fromIntegral stmtParamCount) $ throwColumnMismatch stmtParamCount
-  bind stmt params
+  mapM_
+    ( \(n := v) -> do
+        idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
+        case idx of
+          Just i ->
+            Sqlite.bindSqlData stmt i (toField v)
+          Nothing -> do
+            templ <- getSql stmt
+            fmtError
+              ("Unknown named parameter '" ++ T.unpack n ++ "'")
+              templ
+              params
+    )
+    params
   where
-    bind stmt params =
-      mapM_
-        ( \(n := v) -> do
-            idx <- Sqlite.Direct.bindParameterIndex stmt (Sqlite.Direct.Utf8 . TE.encodeUtf8 $ n)
-            case idx of
-              Just i ->
-                Sqlite.bindSqlData stmt i (toField v)
-              Nothing -> do
-                templ <- getSql stmt
-                fmtError
-                  ("Unknown named parameter '" ++ T.unpack n ++ "'")
-                  templ
-                  params
-        )
-        params
-
     throwColumnMismatch nParams = do
       templ <- getSql stmt
       fmtError

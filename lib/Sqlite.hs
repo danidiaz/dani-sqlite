@@ -158,7 +158,6 @@ import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8With, encodeUtf8)
 import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Data.Text.IO qualified as T
-import Data.Typeable
 import Foreign.Ptr (Ptr)
 import Sqlite.Direct
   ( ArgCount (..),
@@ -214,7 +213,7 @@ data SqlData
   | SqlText !Text
   | SqlBlob !ByteString
   | SqlNull
-  deriving (Eq, Show, Typeable)
+  deriving (Eq, Show)
 
 -- | Exception thrown when Sqlite3 reports an error.
 --
@@ -228,7 +227,7 @@ data SqliteException = SqliteException
     --   e.g. @exec \"SELECT * FROM foo\"@
     sqliteErrorContext :: Text
   }
-  deriving (Eq, Typeable)
+  deriving (Eq)
 
 -- NB: SqliteException is lazy in 'sqliteErrorDetails' and 'sqliteErrorContext',
 -- to defer message construction in the case where a user catches and

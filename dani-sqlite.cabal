@@ -21,7 +21,7 @@ extra-source-files: CHANGELOG.md,
 
 source-repository head
   type:     git
-  location: git://github.com/danidiaz/dani-sqlite.git
+  location: git@github.com:danidiaz/dani-sqlite.git
 
 library
   hs-source-dirs:   lib

@@ -8,7 +8,6 @@ import qualified Data.Text as T
 
 import           Common
 import           Sqlite
-import Data.Tuple (Solo(..))
 import Control.Exception
 
 data TestType = TestType Int Int Int

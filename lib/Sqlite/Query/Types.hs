@@ -26,11 +26,10 @@ import Control.Arrow (first)
 import Data.String (IsString (..))
 import Data.Text qualified as T
 import Data.Tuple (Solo (..))
-import Data.Typeable (Typeable)
 
 -- | A placeholder for the Sql @NULL@ value.
 data Null = Null
-  deriving (Read, Show, Typeable)
+  deriving (Read, Show)
 
 instance Eq Null where
   _ == _ = False
@@ -57,7 +56,7 @@ instance Eq Null where
 newtype Sql = Sql
   { sqlText :: T.Text
   }
-  deriving (Eq, Ord, Typeable)
+  deriving (Eq, Ord)
 
 instance Show Sql where
   show = show . sqlText
@@ -93,6 +92,6 @@ instance Monoid Sql where
 -- forM res $ \\(MyData{..} :. MyData2{..}) -> do
 --   ....
 -- @
-data h :. t = h :. t deriving (Eq, Ord, Show, Read, Typeable)
+data h :. t = h :. t deriving (Eq, Ord, Show, Read)
 
 infixr 3 :.

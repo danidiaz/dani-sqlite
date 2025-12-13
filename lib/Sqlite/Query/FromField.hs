@@ -66,7 +66,7 @@ data ResultError = Incompatible { errSqlType :: String
                  -- be represented as a valid Haskell value, or an
                  -- unexpected low-level error occurred (e.g. mismatch
                  -- between metadata and actual data in a row).
-                   deriving (Eq, Show, Typeable)
+                   deriving (Eq, Show)
 
 instance Exception ResultError
 

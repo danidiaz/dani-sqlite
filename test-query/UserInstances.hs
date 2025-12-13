@@ -8,13 +8,12 @@ module UserInstances (
 
 import           Common
 import           Data.Int (Int64)
-import           Data.Typeable (Typeable)
 import qualified Data.Text as T
 import           Sqlite.Query.FromField
 import           Sqlite.Query.Ok
 import           Sqlite.Query.ToField
 
-newtype MyType = MyType String deriving (Eq, Show, Typeable)
+newtype MyType = MyType String deriving (Eq, Show)
 
 instance FromField MyType where
   fromField f = cvt f . fieldData $ f where

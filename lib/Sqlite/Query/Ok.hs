@@ -31,13 +31,12 @@ module Sqlite.Query.Ok where
 import Control.Applicative
 import Control.Exception
 import Control.Monad (MonadPlus(..))
-import Data.Typeable
 
 -- FIXME:   [SomeException] should probably be something else,  maybe
 --          a difference list (or a tree?)
 
 data Ok a = Errors [SomeException] | Ok !a
-    deriving(Show, Typeable, Functor)
+    deriving(Show, Functor)
 
 -- | Two 'Errors' cases are considered equal, regardless of what the
 --   list of exceptions looks like.
@@ -77,6 +76,6 @@ instance MonadFail Ok where
 -- | a way to reify a list of exceptions into a single exception
 
 newtype ManyErrors = ManyErrors [SomeException]
-   deriving (Show, Typeable)
+   deriving (Show)
 
 instance Exception ManyErrors

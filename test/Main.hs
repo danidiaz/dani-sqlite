@@ -9,20 +9,16 @@ import Control.Exception
 import Control.Monad (forM_, liftM3, when)
 import Data.ByteString qualified as B
 import Data.ByteString.Char8 qualified as B8
-import Data.Monoid
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
 import Data.Text.Encoding.Error (UnicodeException (..))
-import Data.Typeable
 import Sqlite
 import Sqlite.Direct qualified as Direct
 import StrictEq
 import System.Directory (removeFile, doesFileExist)
-import System.Exit (exitFailure)
 import System.IO
 import System.IO.Error (isUserError)
-import System.IO.Temp (withTempFile)
 import System.Timeout (timeout)
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -127,7 +123,7 @@ testExec envIO = do
       return ()
 
 data Ex = Ex
-  deriving (Show, Typeable)
+  deriving (Show)
 
 instance Exception Ex
 

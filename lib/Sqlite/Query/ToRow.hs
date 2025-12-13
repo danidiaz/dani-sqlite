@@ -36,7 +36,7 @@ import Sqlite (SqlData(..))
 --
 -- @since 0.4.18.1
 class GToRow f where
-  gtoRow :: (f a) -> [SqlData]
+  gtoRow :: f a -> [SqlData]
 
 instance GToRow U1 where
   gtoRow U1 = mempty

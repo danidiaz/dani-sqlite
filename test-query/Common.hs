@@ -11,7 +11,6 @@ module Common (
 
 import Test.HUnit
 import Sqlite.Query
-import Data.Tuple (Solo(..))
 
 data TestEnv
     = TestEnv
