@@ -1,7 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 
 -- |
--- This API is a slightly lower-level version of "Database.Sqlite3".  Namely:
+-- This API is a slightly lower-level version of "Sqlite3".  Namely:
 --
 --  * It returns errors instead of throwing them.
 --
