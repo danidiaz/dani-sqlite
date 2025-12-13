@@ -1,3 +1,7 @@
+
+0.1.0.0
+=======
+
 Solo constructor -> MkSolo
 
 SQL -> Sql
@@ -15,7 +19,12 @@ renamed "Database" to "Connection".
 
 incorporated fork of sqlite-simple!
 
+Removed dependency on transformers.
+
 fork!
+
+pre-fork
+========
 
 v2.3.26:
 	* Add support for GHC 8.8 and Stackage LTS 15+
