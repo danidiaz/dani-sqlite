@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------
@@ -24,7 +22,6 @@ import qualified Data.ByteString.Lazy as LB
 import           Data.Int (Int8, Int16, Int32, Int64)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Encoding as T
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Float
 

@@ -1,8 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 ------------------------------------------------------------------------------
 

@@ -1,7 +1,5 @@
-{-# LANGUAGE RecordWildCards, DefaultSignatures, FlexibleContexts, TypeOperators,
-  StandaloneDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 ------------------------------------------------------------------------------
 -- |

@@ -1,8 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor  #-}
-{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
-{-# LANGUAGE ScopedTypeVariables      #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE BlockArguments #-}
 
 ------------------------------------------------------------------------------

@@ -1,7 +1,6 @@
-{-# LANGUAGE DefaultSignatures, FlexibleContexts, DeriveAnyClass, TypeOperators,
-  StandaloneDeriving #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
 ------------------------------------------------------------------------------
 -- |
 -- Module:      Database.Sqlite.Simple.ToRow
