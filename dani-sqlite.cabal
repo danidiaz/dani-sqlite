@@ -16,6 +16,8 @@ category:           Database
 homepage:           https://github.com/danidiaz/dani-sqlite
 bug-reports:        https://github.com/danidiaz/dani-sqlite/issues/new
 build-type:         Simple
+extra-source-files: CHANGELOG.md,
+                    README.md
 
 source-repository head
   type:     git
