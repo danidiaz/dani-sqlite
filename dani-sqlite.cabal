@@ -48,7 +48,7 @@ library bindings
                     Sqlite.Types
   build-depends:    base       >= 4.16.0.0 && < 5
                   , bytestring >= 0.9.2.1
-  default-language: GHC2021
+  default-language: GHC2024
   ghc-options:      -Wall -fwarn-tabs
   visibility: public
   extra-libraries: sqlite3
