@@ -6,14 +6,6 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.Sqlite.Simple
--- Copyright:   (c) 2011 MailRank, Inc.
---              (c) 2011-2012 Leon P Smith
---              (c) 2012-2013 Janne Hellsten
--- License:     BSD3
--- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
--- Portability: portable
---
 -- A 'Sql' type representing queries and statements, along with functions for
 -- executing those. Serialization of parameters and deserialization of results
 -- from/to common Haskell types.

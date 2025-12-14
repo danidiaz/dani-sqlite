@@ -5,14 +5,6 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.Sqlite.Simple.ToField
--- Copyright:   (c) 2011 MailRank, Inc.
---              (c) 2011-2012 Leon P Smith
---              (c) 2012-2013 Janne Hellsten
--- License:     BSD3
--- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
--- Portability: portable
---
 -- The 'ToField' typeclass, for rendering a parameter to an Sqlite
 -- value to be bound as a Sql query parameter.
 module Sqlite.Query.ToField (ToField (..)) where

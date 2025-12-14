@@ -6,13 +6,6 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.Sqlite.Simple.Internal
--- Copyright:   (c) 2011-2012 Leon P Smith
---              (c) 2012-2013 Janne Hellsten
--- License:     BSD3
--- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
--- Portability: portable
---
 -- Internal bits.  This interface is less stable and can change at any time.
 -- In particular this means that while the rest of the sqlite-simple
 -- package endeavors to follow the package versioning policy,  this module

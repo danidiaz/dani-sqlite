@@ -6,13 +6,6 @@
 ------------------------------------------------------------------------------
 
 -- |
--- Module:      Database.Sqlite.Simple.FromRow
--- Copyright:   (c) 2011-2012 Leon P Smith
---              (c) 2012-2013 Janne Hellsten
--- License:     BSD3
--- Maintainer:  Janne Hellsten <jjhellst@gmail.com>
--- Portability: portable
---
 -- The 'FromRow' typeclass, for converting a row of results
 -- returned by a Sql query into a more useful Haskell representation.
 --
