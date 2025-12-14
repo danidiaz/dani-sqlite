@@ -252,6 +252,9 @@ instance Show SqliteException where
 
 instance Exception SqliteException
 
+fromUtf8Lenient :: Utf8 -> Text
+fromUtf8Lenient (Utf8 bs) = decodeUtf8With lenientDecode bs
+
 -- | Like 'decodeUtf8', but substitute a custom error message if
 -- decoding fails.
 fromUtf8 :: String -> Utf8 -> IO Text
@@ -454,7 +457,7 @@ prepare db sql = prepareUtf8 db (toUtf8 sql)
 prepareUtf8 :: Connection -> Utf8 -> IO PreparedStatement
 prepareUtf8 db sql = do
   result <- Direct.prepare db sql
-  m <- checkError (DetailConnection db) ("prepare " `appendShow` sql) result
+  m <- checkError (DetailConnection db) ("prepare " <> fromUtf8Lenient sql) result
   case m of
     Nothing -> fail "Direct.Sqlite3.prepare: empty query string"
     Just stmt -> return stmt
@@ -873,4 +876,4 @@ backupStep backup pages = do
   result <- Direct.backupStep backup pages
   -- it appears that sqlite does not generate an
   -- error message when sqlite3_backup_step fails
-  checkError (DetailMessage "failed") "backupStep" result
+  checkError (DetailMessage (toUtf8 "failed")) "backupStep" result

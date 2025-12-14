@@ -44,6 +44,16 @@ library
   default-language: GHC2024
   ghc-options:      -Wall -fwarn-tabs
 
+library direct
+  hs-source-dirs:   lib-direct
+  exposed-modules:  Sqlite.Direct
+  build-depends:    base       >= 4.16.0.0 && < 5
+                  , bytestring >= 0.9.2.1 && < 0.13
+                  , dani-sqlite:bindings
+  default-language: GHC2024
+  ghc-options:      -Wall -fwarn-tabs
+  visibility: public
+
 library bindings
   hs-source-dirs:   lib-bindings
   exposed-modules:  Sqlite.Bindings
@@ -54,17 +64,6 @@ library bindings
   ghc-options:      -Wall -fwarn-tabs
   visibility: public
   extra-libraries: sqlite3
-
-library direct
-  hs-source-dirs:   lib-direct
-  exposed-modules:  Sqlite.Direct
-  build-depends:    base       >= 4.16.0.0 && < 5
-                  , bytestring >= 0.9.2.1 && < 0.13
-                  , text       >= 2.0 && <2.2
-                  , dani-sqlite:bindings
-  default-language: GHC2024
-  ghc-options:      -Wall -fwarn-tabs
-  visibility: public
 
 test-suite test
   type:               exitcode-stdio-1.0

@@ -12,7 +12,7 @@ import Data.ByteString.Char8 qualified as B8
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
-import Data.Text.Encoding.Error (UnicodeException (..))
+import Data.Text.Encoding.Error (UnicodeException (..), lenientDecode)
 import Sqlite
 import Sqlite.Direct qualified as Direct
 import StrictEq
@@ -339,10 +339,10 @@ testNamedBindParams envIO = do
   withConn $ \conn -> do
     withStmt conn "SELECT :foo / :bar" $ \stmt -> do
       -- Test that we get something back for known names
-      Just fooIdx <- Direct.bindParameterIndex stmt ":foo"
-      Just barIdx <- Direct.bindParameterIndex stmt ":bar"
+      Just fooIdx <- Direct.bindParameterIndex stmt (toUtf8 ":foo")
+      Just barIdx <- Direct.bindParameterIndex stmt (toUtf8 ":bar")
       -- Test that we get Nothing back for unknown names
-      Nothing <- Direct.bindParameterIndex stmt "intentionally_undefined"
+      Nothing <- Direct.bindParameterIndex stmt (toUtf8 "intentionally_undefined")
       Right () <- Direct.bindInt64 stmt fooIdx 4
       Right () <- Direct.bindInt64 stmt barIdx 2
       Row <- step stmt
@@ -352,12 +352,12 @@ testNamedBindParams envIO = do
       return ()
     withStmt conn "SELECT @n1+@n2" $ \stmt -> do
       -- Test that we get something back for known names
-      Just _n1 <- Direct.bindParameterIndex stmt "@n1"
-      Just _n2 <- Direct.bindParameterIndex stmt "@n2"
+      Just _n1 <- Direct.bindParameterIndex stmt (toUtf8 "@n1")
+      Just _n2 <- Direct.bindParameterIndex stmt (toUtf8 "@n2")
       -- Here's where things get confusing..  You can't mix different
       -- types of :/$/@ parameter conventions.
-      Nothing <- Direct.bindParameterIndex stmt ":n1"
-      Nothing <- Direct.bindParameterIndex stmt ":n2"
+      Nothing <- Direct.bindParameterIndex stmt (toUtf8 ":n1")
+      Nothing <- Direct.bindParameterIndex stmt (toUtf8 ":n2")
       return ()
     withStmt conn "SELECT :foo / :bar,:t" $ \stmt -> do
       bindNamed stmt [(":t", SqlText "txt"), (":foo", SqlInteger 6), (":bar", SqlInteger 2)]
@@ -694,7 +694,7 @@ testDecodeError envIO = do
       Row <- step stmt
       TextColumn <- columnType stmt 0
       txt <- Direct.columnText stmt 0
-      assertEqual "testDecodeError: Database altered our invalid UTF-8" invalidUtf8 txt
+      assertEqual "testDecodeError: Database altered our invalid UTF-8" (fromUtf8Lenient invalidUtf8) (fromUtf8Lenient txt)
       Left (DecodeError "Database.Sqlite3.columnText: Invalid UTF-8" _) <-
         try $ columnText stmt 0
       Done <- step stmt
@@ -740,12 +740,12 @@ testGetAutoCommit envIO = do
     True <- Direct.getAutoCommit conn
     exec conn "BEGIN"
     False <- Direct.getAutoCommit conn
-    Left (ErrorError, _) <- Direct.exec conn "BEGIN"
+    Left (ErrorError, _) <- Direct.exec conn (toUtf8 "BEGIN")
     False <- Direct.getAutoCommit conn
 
     exec conn "ROLLBACK"
     True <- Direct.getAutoCommit conn
-    Left (ErrorError, _) <- Direct.exec conn "ROLLBACK"
+    Left (ErrorError, _) <- Direct.exec conn (toUtf8 "ROLLBACK")
     True <- Direct.getAutoCommit conn
 
     -- This commented (because it failed) test seems to check that after a "database
@@ -1033,3 +1033,9 @@ main = do
                 testCase "extended result codes are returned when flag is set" $ testExtendedResultCodes tempDbNameIO
               ]
       ]
+
+toUtf8 :: Text -> Direct.Utf8
+toUtf8 = Direct.Utf8 . T.encodeUtf8
+
+fromUtf8Lenient :: Direct.Utf8 -> Text
+fromUtf8Lenient (Direct.Utf8 bs) = T.decodeUtf8With lenientDecode bs

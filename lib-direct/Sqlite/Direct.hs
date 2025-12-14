@@ -150,10 +150,6 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Internal qualified as BSI
 import Data.ByteString.Unsafe qualified as BSU
 import Data.IORef
-import Data.String (IsString (..))
-import Data.Text qualified as T
-import Data.Text.Encoding qualified as T
-import Data.Text.Encoding.Error (lenientDecode)
 import Foreign
 import Foreign.C
 import Sqlite.Bindings
@@ -180,13 +176,6 @@ data BackupStepResult
 -- | A 'ByteString' containing UTF8-encoded text with no NUL characters.
 newtype Utf8 = Utf8 ByteString
   deriving (Eq, Ord, Semigroup, Monoid)
-
-instance Show Utf8 where
-  show (Utf8 s) = (show . T.decodeUtf8With lenientDecode) s
-
--- | @fromString = Utf8 . 'T.encodeUtf8' . 'T.pack'@
-instance IsString Utf8 where
-  fromString = Utf8 . T.encodeUtf8 . T.pack
 
 packUtf8 :: a -> (Utf8 -> a) -> CString -> IO a
 packUtf8 n f cstr
