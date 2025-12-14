@@ -1,13 +1,10 @@
 cabal-version:      3.8
 name:               dani-sqlite
 version:            0.1.0.0
-synopsis:           Low-level binding to Sqlite3.  Includes UTF8 and BLOB support.
-description:        This package is not very different from the other Sqlite3 bindings out
-                    there, but it fixes a few deficiencies I was finding.  As compared to
-                    bindings-sqlite3, it is slightly higher-level, in that it supports
-                    marshalling of data values to and from the database.  In particular,
-                    it supports strings encoded as UTF8, and BLOBs represented as
-                    ByteStrings.
+synopsis:           Low-level binding to Sqlite3.
+description:        Low-level binding to Sqlite3. 
+                    UTF8 and BLOB support.
+                    sqlite library not included.
 license:            BSD-3-Clause
 license-file:       LICENSE
 copyright:          Copyright (c) 2022 - 2022 Daniel Díaz
