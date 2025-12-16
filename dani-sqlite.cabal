@@ -1,22 +1,22 @@
 cabal-version:      3.8
 name:               dani-sqlite
 version:            0.1.0.0
-synopsis:           Low-level binding to Sqlite3.
-description:        Low-level binding to Sqlite3. 
+synopsis:           Mid-level SQLite client library.
+description:        Mid-level SQLite client library. 
                     UTF8 and BLOB support.
                     sqlite library not included.
 license:            BSD-3-Clause
 license-file:       LICENSE
 copyright:          Copyright (c) 2022 - 2022 Daniel Díaz
 author:             Daniel Díaz <diaz_carrete@yahoo.com>
-maintainer:         Daniel Díaz <diaz_carrete@yahoo.com>
+maintainer:         Daniel Díaz
 category:           Database
 homepage:           https://github.com/danidiaz/dani-sqlite
 bug-reports:        https://github.com/danidiaz/dani-sqlite/issues/new
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md,
                     README.md
-tested-with:  GHC == {9.10.1, 9.12.2}
+tested-with:  GHC == {9.8.4, 9.10.1, 9.12.2}
 
 source-repository head
   type:     git
