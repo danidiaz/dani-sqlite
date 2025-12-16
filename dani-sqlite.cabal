@@ -38,7 +38,7 @@ library
                   , text       >= 2.0 && <2.2
                   , dani-sqlite:bindings
                   , dani-sqlite:direct
-  default-language: GHC2024
+  default-language: GHC2021
   ghc-options:      -Wall -fwarn-tabs
 
 library direct
@@ -47,7 +47,7 @@ library direct
   build-depends:    base       >= 4.16.0.0 && < 5
                   , bytestring >= 0.9.2.1 && < 0.13
                   , dani-sqlite:bindings
-  default-language: GHC2024
+  default-language: GHC2021
   ghc-options:      -Wall -fwarn-tabs
   visibility: public
 
@@ -57,7 +57,7 @@ library bindings
                     Sqlite.Types
   build-depends:    base       >= 4.16.0.0 && < 5
                   , bytestring >= 0.9.2.1 && < 0.13
-  default-language: GHC2024
+  default-language: GHC2021
   ghc-options:      -Wall -fwarn-tabs
   visibility: public
   extra-libraries: sqlite3
@@ -78,11 +78,11 @@ test-suite test
                     , dani-sqlite
                     , dani-sqlite:bindings
                     , dani-sqlite:direct
-  default-language: GHC2024
+  default-language: GHC2021
   ghc-options:        -Wall -threaded -fno-warn-name-shadowing -fno-warn-unused-do-bind
 
 test-suite test-query
-  default-language: GHC2024
+  default-language: GHC2021
   type:             exitcode-stdio-1.0
 
   hs-source-dirs: test-query
