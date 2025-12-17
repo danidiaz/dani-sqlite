@@ -1,4 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 -- |
 -- This API is a slightly lower-level version of "Sqlite3".  Namely:
@@ -156,26 +157,27 @@ import Sqlite.Bindings
 import System.IO.Unsafe qualified as IOU
 
 newtype Connection = Connection (Ptr CConnection)
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 newtype PreparedStatement = PreparedStatement (Ptr CStatement)
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data StepResult
   = Row
   | Done
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 data BackupStepResult
   = -- | There are still more pages to be copied.
     BackupOK
   | -- | All pages were successfully copied.
     BackupDone
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | A 'ByteString' containing UTF8-encoded text with no NUL characters.
 newtype Utf8 = Utf8 ByteString
-  deriving (Eq, Ord, Semigroup, Monoid)
+  deriving stock (Eq, Ord) 
+  deriving newtype (Semigroup, Monoid, Show)
 
 packUtf8 :: a -> (Utf8 -> a) -> CString -> IO a
 packUtf8 n f cstr
@@ -232,19 +234,19 @@ toBackupStepResult code =
 
 -- | The context in which a custom SQL function is executed.
 newtype FuncContext = FuncContext (Ptr CContext)
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- | The arguments of a custom SQL function.
 data FuncArgs = FuncArgs CArgCount (Ptr (Ptr CValue))
 
 -- | The type of blob handles used for incremental blob I/O
 data Blob = Blob Connection (Ptr CBlob) -- we include the db handle to use in
-  deriving (Eq, Show) -- error messages since it cannot
+  deriving stock (Eq, Show) -- error messages since it cannot
   -- be retrieved any other way
 
 -- | A handle for an online backup process.
 data Backup = Backup Connection (Ptr CBackup)
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 -- we include the destination db handle to use in error messages since
 -- it cannot be retrieved any other way

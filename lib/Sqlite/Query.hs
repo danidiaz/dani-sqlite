@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 ------------------------------------------------------------------------------
 
@@ -137,7 +138,7 @@ data FormatError = FormatError
     fmtSql :: Sql,
     fmtParams :: [String]
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 instance Exception FormatError
 
