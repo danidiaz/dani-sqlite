@@ -24,41 +24,42 @@ import Data.ByteString.Lazy.Char8 ()
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Control.Exception
-
-#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
-#endif
+
+import qualified Test.Tasty as Tasty
+import qualified Test.Tasty.HUnit as Tasty
 
 -- Simplest SELECT
-testSimpleOnePlusOne :: TestEnv -> Test
-testSimpleOnePlusOne TestEnv {..} = TestCase $ do
+testSimpleOnePlusOne :: IO TestEnv -> Assertion
+testSimpleOnePlusOne ioenv = do
+  TestEnv {..} <- ioenv
   rows <- select_ conn "SELECT 1+1" :: IO [Solo Int]
-  assertEqual "row count" 1 (length rows)
-  assertEqual "value" (MkSolo 2) (head rows)
+  Tasty.assertEqual "row count" 1 (length rows)
+  Tasty.assertEqual "value" (MkSolo 2) (head rows)
 
 testSimpleSelect :: TestEnv -> Test
 testSimpleSelect TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE test1 (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "INSERT INTO test1 (t) VALUES ('test string')"
   rows <- select_ conn "SELECT t FROM test1" :: IO [Solo String]
-  assertEqual "row count" 1 (length rows)
-  assertEqual "string" (MkSolo "test string") (head rows)
+  Tasty.assertEqual "row count" 1 (length rows)
+  Tasty.assertEqual "string" (MkSolo "test string") (head rows)
   rows <- select_ conn "SELECT id,t FROM test1" :: IO [(Int, String)]
-  assertEqual "int,string" (1, "test string") (head rows)
+  Tasty.assertEqual "int,string" (1, "test string") (head rows)
   -- Add another row
   execute_ conn "INSERT INTO test1 (t) VALUES ('test string 2')"
   rows <- select_ conn "SELECT id,t FROM test1" :: IO [(Int, String)]
-  assertEqual "row count" 2 (length rows)
-  assertEqual "int,string" (1, "test string") (rows !! 0)
-  assertEqual "int,string" (2, "test string 2") (rows !! 1)
+  Tasty.assertEqual "row count" 2 (length rows)
+  Tasty.assertEqual "int,string" (1, "test string") (rows !! 0)
+  Tasty.assertEqual "int,string" (2, "test string 2") (rows !! 1)
   [MkSolo r] <- select_ conn "SELECT NULL" :: IO [Solo (Maybe Int)]
-  assertEqual "nulls" Nothing r
+  Tasty.assertEqual "nulls" Nothing r
   [MkSolo r] <- select_ conn "SELECT 1" :: IO [Solo (Maybe Int)]
-  assertEqual "nulls" (Just 1) r
+  Tasty.assertEqual "nulls" (Just 1) r
   [MkSolo r] <- select_ conn "SELECT 1.0" :: IO [Solo Double]
-  assertEqual "doubles" 1.0 r
+  Tasty.assertEqual "doubles" 1.0 r
   [MkSolo r] <- select_ conn "SELECT 1.0" :: IO [Solo Float]
-  assertEqual "floats" 1.0 r
+  Tasty.assertEqual "floats" 1.0 r
 
 testOutOfRangeParserSelect :: TestEnv -> Test
 testOutOfRangeParserSelect TestEnv {..} = TestCase $ do
@@ -73,25 +74,25 @@ testSimpleParams TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE testparams (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "CREATE TABLE testparams2 (id INTEGER, t TEXT, t2 TEXT)"
   [MkSolo i] <- select conn "SELECT ?" (MkSolo (42 :: Int)) :: IO [Solo Int]
-  assertEqual "select int param" 42 i
+  Tasty.assertEqual "select int param" 42 i
   execute conn "INSERT INTO testparams (t) VALUES (?)" (MkSolo ("test string" :: String))
   rows <- select conn "SELECT t FROM testparams WHERE id = ?" (MkSolo (1 :: Int)) :: IO [Solo String]
-  assertEqual "row count" 1 (length rows)
-  assertEqual "string" (MkSolo "test string") (head rows)
+  Tasty.assertEqual "row count" 1 (length rows)
+  Tasty.assertEqual "string" (MkSolo "test string") (head rows)
   execute_ conn "INSERT INTO testparams (t) VALUES ('test2')"
   [MkSolo row] <- select conn "SELECT t FROM testparams WHERE id = ?" (MkSolo (1 :: Int)) :: IO [Solo String]
-  assertEqual "select params" "test string" row
+  Tasty.assertEqual "select params" "test string" row
   [MkSolo row] <- select conn "SELECT t FROM testparams WHERE id = ?" (MkSolo (2 :: Int)) :: IO [Solo String]
-  assertEqual "select params" "test2" row
+  Tasty.assertEqual "select params" "test2" row
   [MkSolo r1, MkSolo r2] <- select conn "SELECT t FROM testparams WHERE (id = ? OR id = ?)" (1 :: Int, 2 :: Int) :: IO [Solo String]
-  assertEqual "select params" "test string" r1
-  assertEqual "select params" "test2" r2
+  Tasty.assertEqual "select params" "test string" r1
+  Tasty.assertEqual "select params" "test2" r2
   [MkSolo i] <- select conn "SELECT ?+?" [42 :: Int, 1 :: Int] :: IO [Solo Int]
-  assertEqual "select int param" 43 i
+  Tasty.assertEqual "select int param" 43 i
   [MkSolo d] <- select conn "SELECT ?" [2.0 :: Double] :: IO [Solo Double]
-  assertEqual "select double param" 2.0 d
+  Tasty.assertEqual "select double param" 2.0 d
   [MkSolo f] <- select conn "SELECT ?" [4.0 :: Float] :: IO [Solo Float]
-  assertEqual "select double param" 4.0 f
+  Tasty.assertEqual "select double param" 4.0 f
 
 testSimpleInsertId :: TestEnv -> Test
 testSimpleInsertId TestEnv {..} = TestCase $ do
@@ -154,16 +155,16 @@ testSimpleChanges TestEnv {..} = TestCase $ do
   execute_ conn "CREATE TABLE testchanges (id INTEGER PRIMARY KEY, t TEXT)"
   execute conn "INSERT INTO testchanges(t) VALUES (?)" (MkSolo ("test string" :: String))
   numChanges <- changes conn
-  assertEqual "changed/inserted rows" 1 numChanges
+  Tasty.assertEqual "changed/inserted rows" 1 numChanges
   execute conn "INSERT INTO testchanges(t) VALUES (?)" (MkSolo ("test string 2" :: String))
   numChanges <- changes conn
-  assertEqual "changed/inserted rows" 1 numChanges
+  Tasty.assertEqual "changed/inserted rows" 1 numChanges
   execute_ conn "UPDATE testchanges SET t = 'foo' WHERE id = 1"
   numChanges <- changes conn
-  assertEqual "changed/inserted rows" 1 numChanges
+  Tasty.assertEqual "changed/inserted rows" 1 numChanges
   execute_ conn "UPDATE testchanges SET t = 'foo' WHERE id = 100"
   numChanges <- changes conn
-  assertEqual "changed/inserted rows" 0 numChanges
+  Tasty.assertEqual "changed/inserted rows" 0 numChanges
   execute_ conn "UPDATE testchanges SET t = 'foo'"
   numChanges <- changes conn
-  assertEqual "changed/inserted rows" 2 numChanges
+  Tasty.assertEqual "changed/inserted rows" 2 numChanges
