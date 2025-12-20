@@ -19,6 +19,10 @@ import TestImports ()
 import UserInstances
 import Utf8Strings
 
+import qualified Test.Tasty as Tasty
+import qualified Test.Tasty.HUnit as Tasty
+
+
 tests :: [TestEnv -> Test]
 tests =
   [ TestLabel "Query" . testSimpleSelect,
@@ -80,3 +84,30 @@ main = do
   Counts {cases, tried, errors, failures} <-
     withTestEnv $ \env -> runTestTT $ TestList $ map ($ env) tests
   when (cases /= tried || errors /= 0 || failures /= 0) $ exitFailure
+
+tastyMain :: IO ()
+tastyMain = do
+  Tasty.defaultMain $
+    Tasty.testGroup
+      "All"
+      [ 
+        Tasty.testGroup "Query" [],
+        Tasty.testGroup "ParamConv" [],
+        Tasty.testGroup "Errors" [],
+        Tasty.testGroup "Utf8" [],
+        Tasty.testGroup "Instances" [],
+        Tasty.testGroup "Fold" [],
+        Tasty.testGroup "Statement" [],
+        Tasty.testGroup "Imports" []
+      ]
+
+withDatabaseFile ::
+  (IO TestEnv -> Tasty.TestTree) ->
+  Tasty.TestTree
+withDatabaseFile =
+  Tasty.withResource allocFile deallocFile
+  where
+    allocFile = do
+      conn <- open ":memory:"
+      pure TestEnv { conn}
+    deallocFile TestEnv {conn} = close conn

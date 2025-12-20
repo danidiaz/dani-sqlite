@@ -105,5 +105,7 @@ test-suite test-query
                , base16-bytestring
                , bytestring >= 0.9
                , HUnit
+               , tasty >= 1.4.2.1
+               , tasty-hunit >= 0.10.0.3
                , dani-sqlite
                , text
