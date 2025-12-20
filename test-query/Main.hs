@@ -22,6 +22,7 @@ import Utf8Strings
 tests :: [TestEnv -> Test]
 tests =
   [ TestLabel "Query" . testSimpleSelect,
+    TestLabel "Query" . testOutOfRangeParserSelect,
     TestLabel "Query" . testSimpleOnePlusOne,
     TestLabel "Query" . testSimpleParams,
     TestLabel "Query" . testSimpleInsertId,

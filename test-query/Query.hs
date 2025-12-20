@@ -5,6 +5,7 @@
 module Query
   ( testSimpleOnePlusOne,
     testSimpleSelect,
+    testOutOfRangeParserSelect,
     testSimpleParams,
     testSimpleInsertId,
     testSimpleMultiInsert,
@@ -22,6 +23,7 @@ import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 ()
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
+import Control.Exception
 
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
@@ -57,6 +59,14 @@ testSimpleSelect TestEnv {..} = TestCase $ do
   assertEqual "doubles" 1.0 r
   [MkSolo r] <- select_ conn "SELECT 1.0" :: IO [Solo Float]
   assertEqual "floats" 1.0 r
+
+testOutOfRangeParserSelect :: TestEnv -> Test
+testOutOfRangeParserSelect TestEnv {..} = TestCase $ do
+  e <- try @ResultError (select_ conn "SELECT 1" :: IO [(Int, Int)])
+  case e of
+    Left (ConversionFailed {}) -> pure ()
+    Left _ -> assertFailure "Actually, we expected another type of error here!"
+    Right _ -> assertFailure "Actually, we expected an error here!"
 
 testSimpleParams :: TestEnv -> Test
 testSimpleParams TestEnv {..} = TestCase $ do
