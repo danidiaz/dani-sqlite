@@ -2,10 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if MIN_VERSION_base(4,9,0)
 {-# OPTIONS_GHC -Wno-overflowed-literals #-}
-#endif
 
 module ParamConv
   ( testParamConvNull,
@@ -26,134 +23,142 @@ import Data.Int
 import Data.Text qualified as T
 import Data.Word
 import Sqlite.Query.Types (Null (..))
+import qualified Test.Tasty.HUnit as Tasty
 
 one, two, three :: Int
 one = 1
 two = 2
 three = 3
 
-testParamConvNull :: TestEnv -> Test
-testParamConvNull TestEnv {..} = TestCase $ do
+testParamConvNull :: IO TestEnv -> Tasty.Assertion
+testParamConvNull ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE nulltype (id INTEGER PRIMARY KEY, t1 TEXT)"
   [MkSolo r] <- (select_ conn "SELECT NULL") :: IO [Solo Null]
   execute conn "INSERT INTO nulltype (id, t1) VALUES (?,?)" (one, r)
   [MkSolo mr1] <- select_ conn "SELECT t1 FROM nulltype WHERE id = 1" :: IO [Solo (Maybe String)]
-  assertEqual "nulls" Nothing mr1
+  Tasty.assertEqual "nulls" Nothing mr1
   execute conn "INSERT INTO nulltype (id, t1) VALUES (?,?)" (two, "foo" :: String)
   [MkSolo mr2] <- select_ conn "SELECT t1 FROM nulltype WHERE id = 2" :: IO [Solo (Maybe String)]
-  assertEqual "nulls" (Just "foo") mr2
+  Tasty.assertEqual "nulls" (Just "foo") mr2
 
-testParamConvInt :: TestEnv -> Test
-testParamConvInt TestEnv {..} = TestCase $ do
+testParamConvInt :: IO TestEnv -> Tasty.Assertion
+testParamConvInt ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo one)) :: IO [Solo Int]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo one)) :: IO [Solo Integer]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?+?" (one, two)) :: IO [Solo Int]
-  assertEqual "value" 3 r
+  Tasty.assertEqual "value" 3 r
   [MkSolo r] <- (select conn "SELECT ?+?" (one, 15 :: Int64)) :: IO [Solo Int]
-  assertEqual "value" 16 r
+  Tasty.assertEqual "value" 16 r
   [MkSolo r] <- (select conn "SELECT ?+?" (two, 14 :: Int32)) :: IO [Solo Int]
-  assertEqual "value" 16 r
+  Tasty.assertEqual "value" 16 r
   [MkSolo r] <- (select conn "SELECT ?+?" (two, 14 :: Integer)) :: IO [Solo Int]
-  assertEqual "value" 16 r
+  Tasty.assertEqual "value" 16 r
   -- This overflows 32-bit ints, verify that we get more than 32-bits out
   [MkSolo r] <- (select conn "SELECT 255*?" (MkSolo (0x7FFFFFFF :: Int32))) :: IO [Solo Int64]
-  assertEqual
+  Tasty.assertEqual
     "> 32-bit result"
     (255 * 0x7FFFFFFF :: Int64)
     (fromIntegral r)
   [MkSolo r] <- (select conn "SELECT 2*?" (MkSolo (0x7FFFFFFFFF :: Int64))) :: IO [Solo Int64]
-  assertEqual
+  Tasty.assertEqual
     "> 32-bit result & param"
     (2 * 0x7FFFFFFFFF :: Int64)
     (fromIntegral r)
   [MkSolo r] <- (select_ conn "SELECT NULL") :: IO [Solo (Maybe Int)]
-  assertEqual "should see nothing" Nothing r
+  Tasty.assertEqual "should see nothing" Nothing r
   [MkSolo r] <- (select_ conn "SELECT 3") :: IO [Solo (Maybe Int)]
-  assertEqual "should see Just 3" (Just 3) r
+  Tasty.assertEqual "should see Just 3" (Just 3) r
   [MkSolo r] <- (select conn "SELECT ?") (MkSolo (Nothing :: Maybe Int)) :: IO [Solo (Maybe Int)]
-  assertEqual "should see nothing" Nothing r
+  Tasty.assertEqual "should see nothing" Nothing r
   [MkSolo r] <- (select conn "SELECT ?") (MkSolo (Just three :: Maybe Int)) :: IO [Solo (Maybe Int)]
-  assertEqual "should see 4" (Just 3) r
+  Tasty.assertEqual "should see 4" (Just 3) r
 
-testParamConvIntWidths :: TestEnv -> Test
-testParamConvIntWidths TestEnv {..} = TestCase $ do
+testParamConvIntWidths :: IO TestEnv -> Tasty.Assertion
+testParamConvIntWidths ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int8))) :: IO [Solo Int]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int8))) :: IO [Solo Int] -- wrap around
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int16))) :: IO [Solo Int]
-  assertEqual "value" 257 r
+  Tasty.assertEqual "value" 257 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (258 :: Int32))) :: IO [Solo Int]
-  assertEqual "value" 258 r
+  Tasty.assertEqual "value" 258 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Word8))) :: IO [Solo Int]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Word8))) :: IO [Solo Int] -- wrap around
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Word16))) :: IO [Solo Int]
-  assertEqual "value" 257 r
+  Tasty.assertEqual "value" 257 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Word32))) :: IO [Solo Int]
-  assertEqual "value" 257 r
+  Tasty.assertEqual "value" 257 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (0x100000000 :: Word64))) :: IO [Solo Int]
-  assertEqual "value" 0x100000000 r
+  Tasty.assertEqual "value" 0x100000000 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Integer))) :: IO [Solo Int]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Word))) :: IO [Solo Int]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
 
-testParamConvIntWidthsFromField :: TestEnv -> Test
-testParamConvIntWidthsFromField TestEnv {..} = TestCase $ do
+testParamConvIntWidthsFromField :: IO TestEnv -> Tasty.Assertion
+testParamConvIntWidthsFromField ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int))) :: IO [Solo Int8]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int))) :: IO [Solo Int8] -- wrap around
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (65536 :: Int))) :: IO [Solo Int16] -- wrap around
-  assertEqual "value" 0 r
+  Tasty.assertEqual "value" 0 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (65536 :: Int))) :: IO [Solo Int32] -- wrap around
-  assertEqual "value" 65536 r
+  Tasty.assertEqual "value" 65536 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (258 :: Int))) :: IO [Solo Int32]
-  assertEqual "value" 258 r
+  Tasty.assertEqual "value" 258 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int))) :: IO [Solo Word8]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int))) :: IO [Solo Word8] -- wrap around
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int))) :: IO [Solo Word16]
-  assertEqual "value" 257 r
+  Tasty.assertEqual "value" 257 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (257 :: Int))) :: IO [Solo Word32]
-  assertEqual "value" 257 r
+  Tasty.assertEqual "value" 257 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (0x100000000 :: Int64))) :: IO [Solo Word64]
-  assertEqual "value" 0x100000000 r
+  Tasty.assertEqual "value" 0x100000000 r
   [MkSolo r] <- (select conn "SELECT ?" (MkSolo (1 :: Int))) :: IO [Solo Word]
-  assertEqual "value" 1 r
+  Tasty.assertEqual "value" 1 r
 
-testParamConvFloat :: TestEnv -> Test
-testParamConvFloat TestEnv {..} = TestCase $ do
+testParamConvFloat :: IO TestEnv -> Tasty.Assertion
+testParamConvFloat ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo r] <- select conn "SELECT ?" (MkSolo (1.0 :: Double)) :: IO [Solo Double]
-  assertEqual "value" 1.0 r
+  Tasty.assertEqual "value" 1.0 r
   [MkSolo r] <- select conn "SELECT ?*0.25" (MkSolo (8.0 :: Double)) :: IO [Solo Double]
-  assertEqual "value" 2.0 r
+  Tasty.assertEqual "value" 2.0 r
 
-testParamConvBools :: TestEnv -> Test
-testParamConvBools TestEnv {..} = TestCase $ do
+testParamConvBools :: IO TestEnv -> Tasty.Assertion
+testParamConvBools ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE bt (id INTEGER PRIMARY KEY, b BOOLEAN)"
   -- Booleans are ints with values 0 or 1 on Sqlite
   execute_ conn "INSERT INTO bt (b) VALUES (0)"
   execute_ conn "INSERT INTO bt (b) VALUES (1)"
   [MkSolo r1, MkSolo r2] <- select_ conn "SELECT b from bt" :: IO [Solo Bool]
-  assertEqual "bool" False r1
-  assertEqual "bool" True r2
+  Tasty.assertEqual "bool" False r1
+  Tasty.assertEqual "bool" True r2
   execute conn "INSERT INTO bt (b) VALUES (?)" (MkSolo True)
   execute conn "INSERT INTO bt (b) VALUES (?)" (MkSolo False)
   execute conn "INSERT INTO bt (b) VALUES (?)" (MkSolo False)
   [MkSolo r3, MkSolo r4, MkSolo r5] <-
     select_ conn "SELECT b from bt where id in (3, 4, 5) ORDER BY id" :: IO [Solo Bool]
-  assertEqual "bool" True r3
-  assertEqual "bool" False r4
-  assertEqual "bool" False r5
+  Tasty.assertEqual "bool" True r3
+  Tasty.assertEqual "bool" False r4
+  Tasty.assertEqual "bool" False r5
 
-testParamConvFromRow :: TestEnv -> Test
-testParamConvFromRow TestEnv {..} = TestCase $ do
+testParamConvFromRow :: IO TestEnv -> Tasty.Assertion
+testParamConvFromRow ioenv = do
+  TestEnv {..} <- ioenv
   [(1, 2)] <- select_ conn "SELECT 1,2" :: IO [(Int, Int)]
   [(1, 2, 3)] <- select_ conn "SELECT 1,2,3" :: IO [(Int, Int, Int)]
   [(1, 2, 3, 4)] <- select_ conn "SELECT 1,2,3,4" :: IO [(Int, Int, Int, Int)]
@@ -166,8 +171,9 @@ testParamConvFromRow TestEnv {..} = TestCase $ do
   [[1, 2, 3]] <- select_ conn "SELECT 1,2,3" :: IO [[Int]]
   return ()
 
-testParamConvToRow :: TestEnv -> Test
-testParamConvToRow TestEnv {..} = TestCase $ do
+testParamConvToRow :: IO TestEnv -> Tasty.Assertion
+testParamConvToRow ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo (s :: Int)] <- select conn "SELECT 13" ()
   13 @=? s
   [MkSolo (s :: Int)] <- select conn "SELECT ?" (MkSolo one)
@@ -223,8 +229,9 @@ instance ToRow TestTuple where
 instance ToRow TestTuple2 where
   toRow (TestTuple2 a b) = [SqlText a, SqlText b]
 
-testParamConvComposite :: TestEnv -> Test
-testParamConvComposite TestEnv {..} = TestCase $ do
+testParamConvComposite :: IO TestEnv -> Tasty.Assertion
+testParamConvComposite ioenv = do
+  TestEnv {..} <- ioenv
   [t1] <- select_ conn "SELECT 1,2"
   TestTuple 1 2 @=? t1
   [t2] <- select_ conn "SELECT 'foo','bar'"
@@ -237,8 +244,9 @@ testParamConvComposite TestEnv {..} = TestCase $ do
   z @=? "baz"
   w @=? "xyzz"
 
-testParamNamed :: TestEnv -> Test
-testParamNamed TestEnv {..} = TestCase $ do
+testParamNamed :: IO TestEnv -> Tasty.Assertion
+testParamNamed ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo t1] <- selectNamed conn "SELECT :foo / :bar" [":foo" := two, ":bar" := one]
   t1 @=? (2 :: Int)
   [(t1, t2)] <- selectNamed conn "SELECT :foo,:bar" [":foo" := ("foo" :: T.Text), ":bar" := one]

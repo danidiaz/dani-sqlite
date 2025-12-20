@@ -19,6 +19,7 @@ import Data.ByteString qualified as B
 import Data.ByteString.Lazy qualified as LB
 import Data.Word
 import Sqlite.Query.Types (Null)
+import qualified Test.Tasty.HUnit as Tasty
 
 -- The "length (show e) `seq` .." trickery below is to force evaluate
 -- the contents of error messages.  Another option would be to log
@@ -45,8 +46,9 @@ assertOOBCaught action = do
   catch (action >> return False) (\(e :: ArrayException) -> length (show e) `seq` return True)
     >>= assertBool "assertOOBCaught exc"
 
-testErrorsColumns :: TestEnv -> Test
-testErrorsColumns TestEnv {..} = TestCase $ do
+testErrorsColumns :: IO TestEnv -> Tasty.Assertion
+testErrorsColumns ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE cols (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "INSERT INTO cols (t) VALUES ('test string')"
   rows <- select_ conn "SELECT t FROM cols" :: IO [Solo String]
@@ -106,8 +108,9 @@ testErrorsColumns TestEnv {..} = TestCase $ do
         return ()
     )
 
-testErrorsInvalidParams :: TestEnv -> Test
-testErrorsInvalidParams TestEnv {..} = TestCase $ do
+testErrorsInvalidParams :: IO TestEnv -> Tasty.Assertion
+testErrorsInvalidParams ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE invparams (id INTEGER PRIMARY KEY, t TEXT)"
   -- Test that only unnamed params are accepted
   assertFormatErrorCaught
@@ -119,8 +122,9 @@ testErrorsInvalidParams TestEnv {..} = TestCase $ do
   assertFormatErrorCaught
     (execute conn "INSERT INTO invparams (id, t) VALUES (?, ?)" (MkSolo (3 :: Int)))
 
-testErrorsInvalidNamedParams :: TestEnv -> Test
-testErrorsInvalidNamedParams TestEnv {..} = TestCase $ do
+testErrorsInvalidNamedParams :: IO TestEnv -> Tasty.Assertion
+testErrorsInvalidNamedParams ioenv = do
+  TestEnv {..} <- ioenv
   -- Test that only unnamed params are accepted
   assertFormatErrorCaught
     (selectNamed conn "SELECT :foo" [":foox" := (1 :: Int)] :: IO [Solo Int])
@@ -132,22 +136,25 @@ testErrorsInvalidNamedParams TestEnv {..} = TestCase $ do
   assertFormatErrorCaught
     (select conn "SELECT :foo" (MkSolo (1 :: Int)) :: IO [Solo Int])
 
-testErrorsWithStatement :: TestEnv -> Test
-testErrorsWithStatement TestEnv {..} = TestCase $ do
+testErrorsWithStatement :: IO TestEnv -> Tasty.Assertion
+testErrorsWithStatement ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE invstat (id INTEGER PRIMARY KEY, t TEXT)"
   assertSQLErrorCaught $
     withStatement conn "SELECT id, t, t1 FROM invstat" $ \_stmt ->
       assertFailure "Error not detected"
 
-testErrorsColumnName :: TestEnv -> Test
-testErrorsColumnName TestEnv {..} = TestCase $ do
+testErrorsColumnName :: IO TestEnv -> Tasty.Assertion
+testErrorsColumnName ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE invcolumn (id INTEGER PRIMARY KEY, t TEXT)"
   assertOOBCaught $
     withStatement conn "SELECT id FROM invcolumn" $ \stmt ->
       columnName stmt (ColumnIndex (-1)) >> assertFailure "Error not detected"
 
-testErrorsTransaction :: TestEnv -> Test
-testErrorsTransaction TestEnv {..} = TestCase $ do
+testErrorsTransaction :: IO TestEnv -> Tasty.Assertion
+testErrorsTransaction ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE trans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withTransaction conn $ do
     executeNamed conn "INSERT INTO trans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
@@ -185,8 +192,9 @@ testErrorsTransaction TestEnv {..} = TestCase $ do
           return False
         _ -> error "should have only one row"
 
-testErrorsImmediateTransaction :: TestEnv -> Test
-testErrorsImmediateTransaction TestEnv {..} = TestCase $ do
+testErrorsImmediateTransaction :: IO TestEnv -> Tasty.Assertion
+testErrorsImmediateTransaction ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE itrans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withImmediateTransaction conn $ do
     executeNamed conn "INSERT INTO itrans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
@@ -224,8 +232,9 @@ testErrorsImmediateTransaction TestEnv {..} = TestCase $ do
           return False
         _ -> error "should have only one row"
 
-testErrorsExclusiveTransaction :: TestEnv -> Test
-testErrorsExclusiveTransaction TestEnv {..} = TestCase $ do
+testErrorsExclusiveTransaction :: IO TestEnv -> Tasty.Assertion
+testErrorsExclusiveTransaction ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE etrans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withExclusiveTransaction conn $ do
     executeNamed conn "INSERT INTO etrans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]

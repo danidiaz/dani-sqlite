@@ -25,15 +25,7 @@ import qualified Test.Tasty.HUnit as Tasty
 
 tests :: [TestEnv -> Test]
 tests =
-  [ TestLabel "Query" . testSimpleSelect,
-    TestLabel "Query" . testOutOfRangeParserSelect,
-    TestLabel "Query" . testSimpleOnePlusOne,
-    TestLabel "Query" . testSimpleParams,
-    TestLabel "Query" . testSimpleInsertId,
-    TestLabel "Query" . testSimpleMultiInsert,
-    TestLabel "Query" . testSimpleQueryCov,
-    TestLabel "Query" . testSimpleStrings,
-    TestLabel "Query" . testSimpleChanges,
+  [ 
     TestLabel "ParamConv" . testParamConvNull,
     TestLabel "ParamConv" . testParamConvInt,
     TestLabel "ParamConv" . testParamConvIntWidths,
@@ -88,10 +80,21 @@ main = do
 tastyMain :: IO ()
 tastyMain = do
   Tasty.defaultMain $
+    withDatabaseFile $ \ioenv ->
     Tasty.testGroup
       "All"
       [ 
-        Tasty.testGroup "Query" [],
+        Tasty.testGroup "Query" [
+            Tasty.testCase "SimpleSelect" $ testSimpleSelect ioenv,
+            Tasty.testCase "OutOfRangeParserSelect" $ testOutOfRangeParserSelect ioenv,
+            Tasty.testCase "SimpleOnePlusOne" $ testSimpleOnePlusOne ioenv,
+            Tasty.testCase "SimpleParams" $ testSimpleParams ioenv,
+            Tasty.testCase "SimpleInsertId" $ testSimpleInsertId ioenv,
+            Tasty.testCase "SimpleMultiInsert" $ testSimpleMultiInsert ioenv,
+            Tasty.testCase "SimpleQueryCov" $ testSimpleQueryCov ioenv,
+            Tasty.testCase "SimpleStrings" $ testSimpleStrings ioenv,
+            Tasty.testCase "SimpleChanges" $ testSimpleChanges ioenv
+        ],
         Tasty.testGroup "ParamConv" [],
         Tasty.testGroup "Errors" [],
         Tasty.testGroup "Utf8" [],

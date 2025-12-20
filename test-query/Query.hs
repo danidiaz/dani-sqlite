@@ -24,21 +24,19 @@ import Data.ByteString.Lazy.Char8 ()
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Control.Exception
-import Data.Monoid ((<>))
-
-import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.HUnit as Tasty
 
 -- Simplest SELECT
-testSimpleOnePlusOne :: IO TestEnv -> Assertion
+testSimpleOnePlusOne :: IO TestEnv -> Tasty.Assertion
 testSimpleOnePlusOne ioenv = do
   TestEnv {..} <- ioenv
   rows <- select_ conn "SELECT 1+1" :: IO [Solo Int]
   Tasty.assertEqual "row count" 1 (length rows)
   Tasty.assertEqual "value" (MkSolo 2) (head rows)
 
-testSimpleSelect :: TestEnv -> Test
-testSimpleSelect TestEnv {..} = TestCase $ do
+testSimpleSelect :: IO TestEnv -> Tasty.Assertion
+testSimpleSelect ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE test1 (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "INSERT INTO test1 (t) VALUES ('test string')"
   rows <- select_ conn "SELECT t FROM test1" :: IO [Solo String]
@@ -61,16 +59,18 @@ testSimpleSelect TestEnv {..} = TestCase $ do
   [MkSolo r] <- select_ conn "SELECT 1.0" :: IO [Solo Float]
   Tasty.assertEqual "floats" 1.0 r
 
-testOutOfRangeParserSelect :: TestEnv -> Test
-testOutOfRangeParserSelect TestEnv {..} = TestCase $ do
+testOutOfRangeParserSelect :: IO TestEnv -> Tasty.Assertion
+testOutOfRangeParserSelect ioenv = do
+  TestEnv {..} <- ioenv
   e <- try @ResultError (select_ conn "SELECT 1" :: IO [(Int, Int)])
   case e of
     Left (ConversionFailed {}) -> pure ()
     Left _ -> assertFailure "Actually, we expected another type of error here!"
     Right _ -> assertFailure "Actually, we expected an error here!"
 
-testSimpleParams :: TestEnv -> Test
-testSimpleParams TestEnv {..} = TestCase $ do
+testSimpleParams :: IO TestEnv -> Tasty.Assertion
+testSimpleParams ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE testparams (id INTEGER PRIMARY KEY, t TEXT)"
   execute_ conn "CREATE TABLE testparams2 (id INTEGER, t TEXT, t2 TEXT)"
   [MkSolo i] <- select conn "SELECT ?" (MkSolo (42 :: Int)) :: IO [Solo Int]
@@ -94,8 +94,9 @@ testSimpleParams TestEnv {..} = TestCase $ do
   [MkSolo f] <- select conn "SELECT ?" [4.0 :: Float] :: IO [Solo Float]
   Tasty.assertEqual "select double param" 4.0 f
 
-testSimpleInsertId :: TestEnv -> Test
-testSimpleInsertId TestEnv {..} = TestCase $ do
+testSimpleInsertId :: IO TestEnv -> Tasty.Assertion
+testSimpleInsertId ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE test_row_id (id INTEGER PRIMARY KEY, t TEXT)"
   execute conn "INSERT INTO test_row_id (t) VALUES (?)" (MkSolo ("test string" :: String))
   id1 <- lastInsertRowId conn
@@ -109,8 +110,9 @@ testSimpleInsertId TestEnv {..} = TestCase $ do
   [MkSolo row] <- select conn "SELECT t FROM test_row_id WHERE id = ?" (MkSolo (2 :: Int)) :: IO [Solo String]
   "test2" @=? row
 
-testSimpleMultiInsert :: TestEnv -> Test
-testSimpleMultiInsert TestEnv {..} = TestCase $ do
+testSimpleMultiInsert :: IO TestEnv -> Tasty.Assertion
+testSimpleMultiInsert ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE test_multi_insert (id INTEGER PRIMARY KEY, t1 TEXT, t2 TEXT)"
   executeMany conn "INSERT INTO test_multi_insert (t1, t2) VALUES (?, ?)" ([("foo", "bar"), ("baz", "bat")] :: [(String, String)])
   id2 <- lastInsertRowId conn
@@ -119,8 +121,9 @@ testSimpleMultiInsert TestEnv {..} = TestCase $ do
   rows <- select_ conn "SELECT id,t1,t2 FROM test_multi_insert" :: IO [(Int, String, String)]
   [(1, "foo", "bar"), (2, "baz", "bat")] @=? rows
 
-testSimpleQueryCov :: TestEnv -> Test
-testSimpleQueryCov _ = TestCase $ do
+testSimpleQueryCov :: IO TestEnv -> Tasty.Assertion
+testSimpleQueryCov ioenv = do
+  TestEnv {..} <- ioenv
   let str = "SELECT 1+1" :: T.Text
       q = "SELECT 1+1" :: Sql
   sqlText q @=? str
@@ -131,8 +134,9 @@ testSimpleQueryCov _ = TestCase $ do
   q @=? foldr mappend mempty ["SELECT ", "1", "+", "1"]
   True @=? q <= q
 
-testSimpleStrings :: TestEnv -> Test
-testSimpleStrings TestEnv {..} = TestCase $ do
+testSimpleStrings :: IO TestEnv -> Tasty.Assertion
+testSimpleStrings ioenv = do
+  TestEnv {..} <- ioenv
   [MkSolo s] <- select_ conn "SELECT 'str1'" :: IO [Solo T.Text]
   s @=? "str1"
   [MkSolo s] <- select_ conn "SELECT 'strLazy'" :: IO [Solo LT.Text]
@@ -150,8 +154,9 @@ testSimpleStrings TestEnv {..} = TestCase $ do
   [MkSolo s] <- select conn "SELECT ?" (MkSolo ("strBsPLazy2" :: BS.ByteString)) :: IO [Solo LBS.ByteString]
   s @=? "strBsPLazy2"
 
-testSimpleChanges :: TestEnv -> Test
-testSimpleChanges TestEnv {..} = TestCase $ do
+testSimpleChanges :: IO TestEnv -> Tasty.Assertion
+testSimpleChanges ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE testchanges (id INTEGER PRIMARY KEY, t TEXT)"
   execute conn "INSERT INTO testchanges(t) VALUES (?)" (MkSolo ("test string" :: String))
   numChanges <- changes conn

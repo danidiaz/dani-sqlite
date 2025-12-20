@@ -10,8 +10,9 @@ import Common
 import Control.Exception (bracket)
 import Sqlite qualified as DS
 
-testDirectSqlite :: TestEnv -> Test
-testDirectSqlite TestEnv {..} = TestCase $ do
+testDirectSqlite :: IO TestEnv -> Tasty.Assertion
+testDirectSqlite ioenv = do
+  TestEnv {..} <- ioenv
   let dsConn = conn
   bracket (DS.prepare dsConn "SELECT 1+1") DS.finalize testDirect
   [MkSolo (res :: Int)] <- select_ conn "SELECT 1+2"
