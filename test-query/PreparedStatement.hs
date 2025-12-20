@@ -14,7 +14,6 @@ import Common
     Solo (..),
     Test (TestCase),
     TestEnv (..),
-    Tasty.assertEqual,
     columnCount,
     columnName,
     execute_,

@@ -26,16 +26,6 @@ import qualified Test.Tasty.HUnit as Tasty
 tests :: [TestEnv -> Test]
 tests =
   [ 
-    TestLabel "ParamConv" . testParamConvNull,
-    TestLabel "ParamConv" . testParamConvInt,
-    TestLabel "ParamConv" . testParamConvIntWidths,
-    TestLabel "ParamConv" . testParamConvIntWidthsFromField,
-    TestLabel "ParamConv" . testParamConvFloat,
-    TestLabel "ParamConv" . testParamConvBools,
-    TestLabel "ParamConv" . testParamConvToRow,
-    TestLabel "ParamConv" . testParamConvFromRow,
-    TestLabel "ParamConv" . testParamConvComposite,
-    TestLabel "ParamConv" . testParamNamed,
     TestLabel "Errors" . testErrorsColumns,
     TestLabel "Errors" . testErrorsInvalidParams,
     TestLabel "Errors" . testErrorsInvalidNamedParams,
@@ -95,7 +85,18 @@ tastyMain = do
             Tasty.testCase "SimpleStrings" $ testSimpleStrings ioenv,
             Tasty.testCase "SimpleChanges" $ testSimpleChanges ioenv
         ],
-        Tasty.testGroup "ParamConv" [],
+        Tasty.testGroup "ParamConv" [
+            Tasty.testCase "testParamConvNull" $ testParamConvNull ioenv,
+            Tasty.testCase "testParamConvInt" $ testParamConvInt ioenv,
+            Tasty.testCase "testParamConvIntWidths" $ testParamConvIntWidths ioenv,
+            Tasty.testCase "testParamConvIntWidthsFromField" $ testParamConvIntWidthsFromField ioenv,
+            Tasty.testCase "testParamConvFloat" $ testParamConvFloat ioenv,
+            Tasty.testCase "testParamConvBools" $ testParamConvBools ioenv,
+            Tasty.testCase "testParamConvToRow" $ testParamConvToRow ioenv,
+            Tasty.testCase "testParamConvFromRow" $ testParamConvFromRow ioenv,
+            Tasty.testCase "testParamConvComposite" $ testParamConvComposite ioenv,
+            Tasty.testCase "testParamName" $ testParamNamed ioenv
+        ],
         Tasty.testGroup "Errors" [],
         Tasty.testGroup "Utf8" [],
         Tasty.testGroup "Instances" [],

@@ -154,17 +154,17 @@ testErrorsColumnName ioenv = do
 
 testErrorsTransaction :: IO TestEnv -> Tasty.Assertion
 testErrorsTransaction ioenv = do
-  TestEnv {..} <- ioenv
+  TestEnv {conn} <- ioenv
   execute_ conn "CREATE TABLE trans (id INTEGER PRIMARY KEY, t TEXT)"
   v <- withTransaction conn $ do
     executeNamed conn "INSERT INTO trans (t) VALUES (:txt)" [":txt" := ("foo" :: String)]
     [MkSolo r] <- select_ conn "SELECT t FROM trans" :: IO [Solo String]
     return r
   v @=? "foo"
-  e <- rowExists
+  e <- rowExists conn
   True @=? e
   execute_ conn "DELETE FROM trans"
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   assertFormatErrorCaught
     ( withTransaction conn $ do
@@ -179,10 +179,10 @@ testErrorsTransaction ioenv = do
           "INSERT INTO trans (t) VALUES (:txt)"
           [":missing" := ("foo" :: String)]
     )
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   where
-    rowExists = do
+    rowExists conn = do
       rows <- select_ conn "SELECT t FROM trans" :: IO [Solo String]
       case rows of
         [MkSolo txt] -> do
@@ -201,10 +201,10 @@ testErrorsImmediateTransaction ioenv = do
     [MkSolo r] <- select_ conn "SELECT t FROM itrans" :: IO [Solo String]
     return r
   v @=? "foo"
-  e <- rowExists
+  e <- rowExists conn
   True @=? e
   execute_ conn "DELETE FROM itrans"
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   assertFormatErrorCaught
     ( withImmediateTransaction conn $ do
@@ -219,10 +219,10 @@ testErrorsImmediateTransaction ioenv = do
           "INSERT INTO itrans (t) VALUES (:txt)"
           [":missing" := ("foo" :: String)]
     )
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   where
-    rowExists = do
+    rowExists conn = do
       rows <- select_ conn "SELECT t FROM itrans" :: IO [Solo String]
       case rows of
         [MkSolo txt] -> do
@@ -241,10 +241,10 @@ testErrorsExclusiveTransaction ioenv = do
     [MkSolo r] <- select_ conn "SELECT t FROM etrans" :: IO [Solo String]
     return r
   v @=? "foo"
-  e <- rowExists
+  e <- rowExists conn
   True @=? e
   execute_ conn "DELETE FROM etrans"
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   assertFormatErrorCaught
     ( withExclusiveTransaction conn $ do
@@ -259,10 +259,10 @@ testErrorsExclusiveTransaction ioenv = do
           "INSERT INTO etrans (t) VALUES (:txt)"
           [":missing" := ("foo" :: String)]
     )
-  e <- rowExists
+  e <- rowExists conn
   False @=? e
   where
-    rowExists = do
+    rowExists conn = do
       rows <- select_ conn "SELECT t FROM etrans" :: IO [Solo String]
       case rows of
         [MkSolo txt] -> do
