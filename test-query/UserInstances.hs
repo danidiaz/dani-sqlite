@@ -13,6 +13,7 @@ import Data.Text qualified as T
 import Sqlite.Query.FromField
 import Sqlite.Query.Ok
 import Sqlite.Query.ToField
+import qualified Test.Tasty.HUnit as Tasty
 
 newtype MyType = MyType String deriving (Eq, Show)
 
@@ -27,8 +28,9 @@ instance ToField MyType where
   -- Prefix with "toField " to really ensure we got here
   toField (MyType s) = SqlText . T.pack $ ("toField " ++ s)
 
-testUserFromField :: TestEnv -> Test
-testUserFromField TestEnv {..} = TestCase $ do
+testUserFromField :: IO TestEnv -> Tasty.Assertion
+testUserFromField ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE fromfield (t TEXT)"
   execute conn "INSERT INTO fromfield (t) VALUES (?)" (MkSolo ("test string" :: String))
   [MkSolo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo MyType)]
@@ -38,8 +40,9 @@ testUserFromField TestEnv {..} = TestCase $ do
   [MkSolo r] <- select_ conn "SELECT t FROM fromfield" :: IO [(Solo String)]
   "toField test2" @=? r
 
-testSqlDataFromField :: TestEnv -> Test
-testSqlDataFromField TestEnv {..} = TestCase $ do
+testSqlDataFromField :: IO TestEnv -> Tasty.Assertion
+testSqlDataFromField ioenv = do
+  TestEnv {..} <- ioenv
   execute_ conn "CREATE TABLE sqldatafromfield (t TEXT, i INT, b BOOLEAN, f FLOAT)"
   execute
     conn

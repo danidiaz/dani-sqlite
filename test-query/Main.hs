@@ -26,25 +26,6 @@ import qualified Test.Tasty.HUnit as Tasty
 tests :: [TestEnv -> Test]
 tests =
   [ 
-    TestLabel "Errors" . testErrorsColumns,
-    TestLabel "Errors" . testErrorsInvalidParams,
-    TestLabel "Errors" . testErrorsInvalidNamedParams,
-    TestLabel "Errors" . testErrorsWithStatement,
-    TestLabel "Errors" . testErrorsColumnName,
-    TestLabel "Errors" . testErrorsTransaction,
-    TestLabel "Errors" . testErrorsImmediateTransaction,
-    TestLabel "Errors" . testErrorsExclusiveTransaction,
-    TestLabel "Utf8" . testUtf8Simplest,
-    TestLabel "Utf8" . testBlobs,
-    TestLabel "Instances" . testUserFromField,
-    TestLabel "Instances" . testSqlDataFromField,
-    TestLabel "Fold" . testFolds,
-    TestLabel "Statement" . testBind,
-    TestLabel "Statement" . testDoubleBind,
-    TestLabel "Statement" . testPreparedStatements,
-    TestLabel "Statement" . testPreparedStatementsColumnCount,
-    TestLabel "Direct" . testDirectSqlite,
-    TestLabel "Imports" . testImports
   ]
 
 -- | Action for connecting to the database that will be used for testing.
@@ -97,12 +78,39 @@ tastyMain = do
             Tasty.testCase "testParamConvComposite" $ testParamConvComposite ioenv,
             Tasty.testCase "testParamName" $ testParamNamed ioenv
         ],
-        Tasty.testGroup "Errors" [],
-        Tasty.testGroup "Utf8" [],
-        Tasty.testGroup "Instances" [],
-        Tasty.testGroup "Fold" [],
-        Tasty.testGroup "Statement" [],
-        Tasty.testGroup "Imports" []
+        Tasty.testGroup "Errors" [
+            Tasty.testCase "ErrorsColumns" $ testErrorsColumns ioenv,
+            Tasty.testCase "ErrorsInvalidParams" $ testErrorsInvalidParams ioenv,
+            Tasty.testCase "ErrorsInvalidNamedParams" $ testErrorsInvalidNamedParams ioenv,
+            Tasty.testCase "ErrorsWithStatement" $ testErrorsWithStatement ioenv,
+            Tasty.testCase "ErrorsColumnName" $ testErrorsColumnName ioenv,
+            Tasty.testCase "ErrorsTransaction" $ testErrorsTransaction ioenv,
+            Tasty.testCase "ErrorsImmediateTransaction" $ testErrorsImmediateTransaction ioenv,
+            Tasty.testCase "ErrorsExclusiveTransaction" $ testErrorsExclusiveTransaction ioenv
+        ],
+        Tasty.testGroup "Utf8" [
+            Tasty.testCase "Utf8Simplest" $ testUtf8Simplest ioenv,
+            Tasty.testCase "Blobs" $ testBlobs ioenv
+        ],
+        Tasty.testGroup "Instances" [
+            Tasty.testCase "UserFromField" $ testUserFromField ioenv,
+            Tasty.testCase "SqlDataFromField" $ testSqlDataFromField ioenv
+        ],
+        Tasty.testGroup "Fold" [
+            Tasty.testCase "Folds" $ testFolds ioenv
+        ],
+        Tasty.testGroup "Statement" [
+            Tasty.testCase "Bind" $ testBind ioenv,
+            Tasty.testCase "DoubleBind" $ testDoubleBind ioenv,
+            Tasty.testCase "PreparedStatements" $ testPreparedStatements ioenv,
+            Tasty.testCase "PreparedStatementsColumnCount" $ testPreparedStatementsColumnCount ioenv
+        ],
+        Tasty.testGroup "Direct" [
+            Tasty.testCase "DirectSqlite" $ testDirectSqlite ioenv
+        ],
+        Tasty.testGroup "Imports" [
+            Tasty.testCase "Imports" $ testImports ioenv
+        ]
       ]
 
 withDatabaseFile ::

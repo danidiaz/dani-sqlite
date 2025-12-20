@@ -11,6 +11,7 @@ import Common
 import Control.Exception
 import Data.Text qualified as T
 import Sqlite
+import qualified Test.Tasty.HUnit as Tasty
 
 data TestType = TestType Int Int Int
 
@@ -18,7 +19,7 @@ data TestType = TestType Int Int Int
 instance FromRow TestType where
   fromRow = TestType <$> field <*> field <*> field
 
-test1 :: IO ()
+test1 :: Tasty.Assertion
 test1 = do
   conn <- open ":memory:"
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY, id2 INTEGER, id3 INTEGER)"
@@ -27,7 +28,7 @@ test1 = do
   [_v] <- select conn "SELECT ?+?" (3 :: Int, 4 :: Int) :: IO [(Solo Int)]
   close conn
 
-test2 :: Connection -> IO ()
+test2 :: Connection -> Tasty.Assertion
 test2 conn = do
   execute_ conn "CREATE TABLE testimp (id INTEGER PRIMARY KEY)"
   execute_ conn "INSERT INTO testimp (id) VALUES (1)"
@@ -36,13 +37,14 @@ test2 conn = do
   where
     q = T.concat ["SELECT * FROM ", "testimp"]
 
-test3 :: Connection -> IO ()
+test3 :: Connection -> Tasty.Assertion
 test3 conn = do
   [_v] <- select conn "SELECT ?+?" (3 :: Int, 4 :: Int) :: IO [(Solo Int)]
   return ()
 
-testImports :: TestEnv -> Test
-testImports env = TestCase $ do
+testImports :: IO TestEnv -> Tasty.Assertion
+testImports ioenv = do
+  env <- ioenv
   test1
   bracket (open ":memory:") close test2
   test3 (conn env)
