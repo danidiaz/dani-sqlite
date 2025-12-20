@@ -24,7 +24,8 @@ import Data.ByteString.Lazy.Char8 ()
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
 import Control.Exception
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit
+import Test.Tasty.HUnit qualified as Tasty
 
 -- Simplest SELECT
 testSimpleOnePlusOne :: IO TestEnv -> Tasty.Assertion

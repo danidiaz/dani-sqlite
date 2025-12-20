@@ -84,7 +84,6 @@ test-suite test
 test-suite test-query
   default-language: GHC2021
   type:             exitcode-stdio-1.0
-
   hs-source-dirs: test-query
   main-is:        Main.hs
   other-modules:  Common
@@ -97,14 +96,10 @@ test-suite test-query
                 , TestImports
                 , UserInstances
                 , Utf8Strings
-
   ghc-options: -Wall -fno-warn-name-shadowing -fno-warn-unused-do-bind
-
-
   build-depends: base
                , base16-bytestring
                , bytestring >= 0.9
-               , HUnit
                , tasty >= 1.4.2.1
                , tasty-hunit >= 0.10.0.3
                , dani-sqlite

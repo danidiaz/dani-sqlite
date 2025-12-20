@@ -19,6 +19,7 @@ import Data.ByteString qualified as B
 import Data.ByteString.Lazy qualified as LB
 import Data.Word
 import Sqlite.Query.Types (Null)
+import Test.Tasty.HUnit
 import qualified Test.Tasty.HUnit as Tasty
 
 -- The "length (show e) `seq` .." trickery below is to force evaluate

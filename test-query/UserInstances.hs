@@ -13,6 +13,7 @@ import Data.Text qualified as T
 import Sqlite.Query.FromField
 import Sqlite.Query.Ok
 import Sqlite.Query.ToField
+import Test.Tasty.HUnit
 import qualified Test.Tasty.HUnit as Tasty
 
 newtype MyType = MyType String deriving (Eq, Show)

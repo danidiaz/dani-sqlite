@@ -3,8 +3,6 @@
 module Main where
 
 import Common
-import Control.Exception (bracket)
-import Control.Monad (when)
 import DirectSqlite
 import Errors
 import Fold
@@ -12,46 +10,21 @@ import ParamConv
 import PreparedStatement
 import Query
 import Sqlite
-import System.Exit (exitFailure)
-import System.IO
 import TestImports
-import TestImports ()
 import UserInstances
 import Utf8Strings
 
 import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.HUnit as Tasty
 
-
-tests :: [TestEnv -> Test]
-tests =
-  [ 
-  ]
-
--- | Action for connecting to the database that will be used for testing.
---
--- Note that some tests, such as Notify, use multiple connections, and assume
--- that 'testConnect' connects to the same database every time it is called.
-testConnect :: IO Connection
-testConnect = open ":memory:"
-
-withTestEnv :: (TestEnv -> IO a) -> IO a
-withTestEnv cb =
-  withConn $ \conn -> cb TestEnv {conn = conn}
-  where
-    withConn = bracket testConnect close
-
 main :: IO ()
 main = do
-  mapM_ (`hSetBuffering` LineBuffering) [stdout, stderr]
-  Counts {cases, tried, errors, failures} <-
-    withTestEnv $ \env -> runTestTT $ TestList $ map ($ env) tests
-  when (cases /= tried || errors /= 0 || failures /= 0) $ exitFailure
+  tastyMain
 
 tastyMain :: IO ()
 tastyMain = do
   Tasty.defaultMain $
-    withDatabaseFile $ \ioenv ->
+    withTestEnv $ \ioenv ->
     Tasty.testGroup
       "All"
       [ 
@@ -113,10 +86,10 @@ tastyMain = do
         ]
       ]
 
-withDatabaseFile ::
+withTestEnv ::
   (IO TestEnv -> Tasty.TestTree) ->
   Tasty.TestTree
-withDatabaseFile =
+withTestEnv =
   Tasty.withResource allocFile deallocFile
   where
     allocFile = do

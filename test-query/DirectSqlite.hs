@@ -9,6 +9,7 @@ where
 import Common
 import Control.Exception (bracket)
 import Sqlite qualified as DS
+import Test.Tasty.HUnit
 import qualified Test.Tasty.HUnit as Tasty
 
 testDirectSqlite :: IO TestEnv -> Tasty.Assertion

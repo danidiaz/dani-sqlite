@@ -23,6 +23,7 @@ import Data.Int
 import Data.Text qualified as T
 import Data.Word
 import Sqlite.Query.Types (Null (..))
+import Test.Tasty.HUnit
 import qualified Test.Tasty.HUnit as Tasty
 
 one, two, three :: Int
