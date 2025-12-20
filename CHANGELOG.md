@@ -1,3 +1,8 @@
+0.1.1.0
+=======
+
+- Bring back the 'Show' instance for 'Utf8', this time reusing 'ByteString''s Show instance.
+- 'FromRow' and 'ToRow' instances for 'Generically', to allow for 'DerivingVia'.
 
 0.1.0.0
 =======

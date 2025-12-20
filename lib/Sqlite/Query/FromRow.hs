@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 ------------------------------------------------------------------------------
 
@@ -99,8 +100,11 @@ instance (GFromRow a, GFromRow b) => GFromRow (a :*: b) where
 -- For more details refer to 'GFromRow'.
 class FromRow a where
   fromRow :: RowParser a
-  default fromRow :: (Generic a) => (GFromRow (Rep a)) => RowParser a
+  default fromRow :: (Generic a, GFromRow (Rep a)) => RowParser a
   fromRow = to <$> gfromRow
+
+instance (Generic a, GFromRow (Rep a)) => FromRow (Generically a) where
+  fromRow = Generically . to <$> gfromRow
 
 fieldWith :: FieldParser a -> RowParser a
 fieldWith fieldP = do

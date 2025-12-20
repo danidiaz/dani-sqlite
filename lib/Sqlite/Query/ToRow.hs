@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 ------------------------------------------------------------------------------
 
@@ -52,8 +53,11 @@ instance (GToRow a) => GToRow (M1 i c a) where
 class ToRow a where
   toRow :: a -> [SqlData]
   -- ^ 'ToField' a collection of values.
-  default toRow :: (Generic a) => (GToRow (Rep a)) => a -> [SqlData]
+  default toRow :: (Generic a, GToRow (Rep a)) => a -> [SqlData]
   toRow a = gtoRow $ from a
+
+instance (Generic a, GToRow (Rep a)) => ToRow (Generically a) where
+  toRow (Generically a)= gtoRow $ from a
 
 deriving instance ToRow ()
 
