@@ -620,6 +620,9 @@ columnBlob (PreparedStatement stmt) idx = do
   packCStringLen ptr len
 
 -- | <https://www.sqlite.org/c3ref/last_insert_rowid.html>
+--
+-- Returns the rowid of the most recent successful INSERT on the
+-- given database connection.
 lastInsertRowId :: Connection -> IO Int64
 lastInsertRowId (Connection db) =
   c_sqlite3_last_insert_rowid db

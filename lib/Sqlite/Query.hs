@@ -7,9 +7,12 @@
 ------------------------------------------------------------------------------
 
 -- |
+--
 -- A 'Sql' type representing queries and statements, along with functions for
 -- executing those. Serialization of parameters and deserialization of results
 -- from/to common Haskell types.
+--
+--
 module Sqlite.Query
   ( -- ** Examples of use
     -- $use
@@ -57,7 +60,7 @@ module Sqlite.Query
     selectWith,
     selectWith_,
     selectNamed,
-    lastInsertRowId,
+    Sqlite.Direct.lastInsertRowId,
     changes,
     totalChanges,
 
@@ -522,13 +525,6 @@ withExclusiveTransaction :: Connection -> IO a -> IO a
 withExclusiveTransaction conn action =
   withTransactionPrivate conn action Exclusive
 
--- | Returns the rowid of the most recent successful INSERT on the
--- given database connection.
---
--- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
-lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = Sqlite.Direct.lastInsertRowId
-
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
 -- Return the number of rows that were changed, inserted, or deleted
@@ -574,33 +570,38 @@ getSql stmt =
 -- refer to a previously inserted row) and 'executeNamed' (an easier
 -- to maintain form of query parameter naming).
 --
--- >{-# LANGUAGE OverloadedStrings #-}
--- >
--- >import           Control.Applicative
--- >import qualified Data.Text as T
--- >import           Sqlite
--- >import           Sqlite.Query
--- >
--- >data TestField = TestField Int T.Text deriving (Show)
--- >
--- >instance FromRow TestField where
--- >  fromRow = TestField <$> field <*> field
--- >
--- >instance ToRow TestField where
--- >  toRow (TestField id_ str) = toRow (id_, str)
--- >
--- >main :: IO ()
--- >main = do
--- >  conn <- open "test.db"
--- >  execute_ conn "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, str TEXT)"
--- >  execute conn "INSERT INTO test (str) VALUES (?)" (Only ("test string 2" :: String))
--- >  execute conn "INSERT INTO test (id, str) VALUES (?,?)" (TestField 13 "test string 3")
--- >  rowId <- lastInsertRowId conn
--- >  executeNamed conn "UPDATE test SET str = :str WHERE id = :id" [":str" := ("updated str" :: T.Text), ":id" := rowId]
--- >  r <- query_ conn "SELECT * from test" :: IO [TestField]
--- >  mapM_ print r
--- >  execute conn "DELETE FROM test WHERE id = ?" (Only rowId)
--- >  close conn
+-- >>> :{
+-- import Sqlite
+-- import Sqlite.Query
+-- import Control.Applicative
+-- import Data.Text qualified as T
+-- -- 
+-- data TestField = TestField Int T.Text deriving (Show)
+-- --
+-- instance FromRow TestField where
+--   fromRow = TestField <$> field <*> field
+-- --
+-- instance ToRow TestField where
+--   toRow (TestField id_ str) = toRow (id_, str)
+-- :}
+--
+-- >>> :{
+-- do
+--   conn <- open ":memory:"
+--   execute_ conn "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, str TEXT)"
+--   execute conn "INSERT INTO test (str) VALUES (?)" (MkSolo ("test string 2" :: String))
+--   execute conn "INSERT INTO test (id, str) VALUES (?,?)" (TestField 13 "test string 3")
+--   rowId <- lastInsertRowId conn
+--   executeNamed conn "UPDATE test SET str = :str WHERE id = :id" [":str" := ("updated str" :: T.Text), ":id" := rowId]
+--   r <- select_ conn "SELECT * from test" :: IO [TestField]
+--   mapM_ print r
+--   execute conn "DELETE FROM test WHERE id = ?" (MkSolo rowId)
+--   close conn
+-- :}
+-- TestField 1 "test string 2"
+-- TestField 13 "updated str"
+--
+
 
 -- $querytype
 --
@@ -718,13 +719,13 @@ getSql stmt =
 -- types. Consider a case where you write a numeric literal in a
 -- parameter tuple:
 --
--- > query conn "select ? + ?" (40,2)
+-- > select conn "select ? + ?" (40,2)
 --
 -- The above query will be rejected by the compiler, because it does
 -- not know the specific numeric types of the literals @40@ and @2@.
 -- This is easily fixed:
 --
--- > query conn "select ? + ?" (40 :: Double, 2 :: Double)
+-- > select conn "select ? + ?" (40 :: Double, 2 :: Double)
 --
 -- The same kind of problem can arise with string literals if you have
 -- the @OverloadedStrings@ language extension enabled.  Again, just
@@ -816,3 +817,9 @@ getSql stmt =
 --
 -- You can extend conversion support to your own types be adding your
 -- own 'FromField' / 'ToField' instances.
+
+-- $setup
+-- >>> :set -XBlockArguments
+-- >>> :set -XOverloadedStrings
+-- >>> import Sqlite
+-- >>> import Data.Tuple
