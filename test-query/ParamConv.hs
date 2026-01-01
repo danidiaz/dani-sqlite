@@ -24,7 +24,7 @@ import Data.Text qualified as T
 import Data.Word
 import Sqlite.Query.Types (Null (..))
 import Test.Tasty.HUnit
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 one, two, three :: Int
 one = 1

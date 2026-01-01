@@ -14,7 +14,7 @@ import Sqlite.Query.FromField
 import Sqlite.Query.Ok
 import Sqlite.Query.ToField
 import Test.Tasty.HUnit
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 newtype MyType = MyType String deriving (Eq, Show)
 

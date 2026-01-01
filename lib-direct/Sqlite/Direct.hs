@@ -176,7 +176,7 @@ data BackupStepResult
 
 -- | A 'ByteString' containing UTF8-encoded text with no NUL characters.
 newtype Utf8 = Utf8 ByteString
-  deriving stock (Eq, Ord) 
+  deriving stock (Eq, Ord)
   deriving newtype (Semigroup, Monoid, Show)
 
 packUtf8 :: a -> (Utf8 -> a) -> CString -> IO a

@@ -57,7 +57,7 @@ class ToRow a where
   toRow a = gtoRow $ from a
 
 instance (Generic a, GToRow (Rep a)) => ToRow (Generically a) where
-  toRow (Generically a)= gtoRow $ from a
+  toRow (Generically a) = gtoRow $ from a
 
 deriving instance ToRow ()
 

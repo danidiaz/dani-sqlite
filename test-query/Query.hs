@@ -18,12 +18,12 @@ where
 -- orphan IsString instance in older byteString
 
 import Common
+import Control.Exception
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 ()
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as LT
-import Control.Exception
 import Test.Tasty.HUnit
 import Test.Tasty.HUnit qualified as Tasty
 

@@ -20,7 +20,7 @@ import Data.ByteString.Lazy qualified as LB
 import Data.Word
 import Sqlite.Query.Types (Null)
 import Test.Tasty.HUnit
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 -- The "length (show e) `seq` .." trickery below is to force evaluate
 -- the contents of error messages.  Another option would be to log

@@ -10,7 +10,7 @@ where
 import Common
 import Data.ByteString qualified as B
 import Data.Word
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 testUtf8Simplest :: IO TestEnv -> Tasty.Assertion
 testUtf8Simplest ioenv = do
