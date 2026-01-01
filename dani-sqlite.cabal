@@ -1,9 +1,8 @@
 cabal-version:      3.8
 name:               dani-sqlite
-version:            0.1.0.0
-synopsis:           Mid-level SQLite client library.
-description:        Mid-level SQLite client library. 
-                    UTF8 and BLOB support.
+version:            0.1.1.0
+synopsis:           SQLite client library.
+description:        SQLite client library. 
                     sqlite library not included.
 license:            BSD-3-Clause
 license-file:       LICENSE
