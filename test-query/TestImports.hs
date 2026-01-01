@@ -11,7 +11,7 @@ import Common
 import Control.Exception
 import Data.Text qualified as T
 import Sqlite
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 data TestType = TestType Int Int Int
 

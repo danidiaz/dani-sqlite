@@ -8,8 +8,7 @@ module Fold
 where
 
 import Common
-import qualified Test.Tasty.HUnit as Tasty
-
+import Test.Tasty.HUnit qualified as Tasty
 
 testFolds :: IO TestEnv -> Tasty.Assertion
 testFolds ioenv = do

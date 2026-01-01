@@ -1,12 +1,13 @@
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 ------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
 
 -- |
+--
 -- A 'Sql' type representing queries and statements, along with functions for
 -- executing those. Serialization of parameters and deserialization of results
 -- from/to common Haskell types.
@@ -57,7 +58,7 @@ module Sqlite.Query
     selectWith,
     selectWith_,
     selectNamed,
-    lastInsertRowId,
+    Sqlite.Direct.lastInsertRowId,
     changes,
     totalChanges,
 
@@ -101,7 +102,6 @@ where
 
 import Control.Exception
 import Control.Monad (forM_, void, when)
-import Data.Int (Int64)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Sqlite (ColumnIndex, PreparedStatement, SqlData)
@@ -327,28 +327,28 @@ select ::
   IO [r]
 select = selectWith fromRow
 
--- | A version of 'query' that does not perform query substitution.
+-- | A version of 'select' that does not perform query substitution.
 select_ :: (FromRow r) => Connection -> Sql -> IO [r]
 select_ = selectWith_ fromRow
 
--- | A version of 'query' that takes an explicit 'RowParser'.
+-- | A version of 'select' that takes an explicit 'RowParser'.
 selectWith :: (ToRow q) => RowParser r -> Connection -> Sql -> q -> IO [r]
 selectWith fromRow_ conn templ qs =
   withStatementParams conn templ qs do doFoldToList fromRow_
 
--- | A version of 'query' that does not perform query substitution and
+-- | A version of 'select' that does not perform query substitution and
 -- takes an explicit 'RowParser'.
 selectWith_ :: RowParser r -> Connection -> Sql -> IO [r]
 selectWith_ fromRow_ conn query =
   withStatement conn query do doFoldToList fromRow_
 
--- | A version of 'query' where the query parameters (placeholders)
+-- | A version of 'select' where the query parameters (placeholders)
 -- are named.
 --
 -- Example:
 --
 -- @
--- r \<- 'queryNamed' c \"SELECT * FROM posts WHERE id=:id AND date>=:date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
+-- r \<- 'selectNamed' c \"SELECT * FROM posts WHERE id=:id AND date>=:date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
 -- @
 selectNamed :: (FromRow r) => Connection -> Sql -> [NamedParam] -> IO [r]
 selectNamed conn templ params =
@@ -522,13 +522,6 @@ withExclusiveTransaction :: Connection -> IO a -> IO a
 withExclusiveTransaction conn action =
   withTransactionPrivate conn action Exclusive
 
--- | Returns the rowid of the most recent successful INSERT on the
--- given database connection.
---
--- See also <http://www.sqlite.org/c3ref/last_insert_rowid.html>.
-lastInsertRowId :: Connection -> IO Int64
-lastInsertRowId = Sqlite.Direct.lastInsertRowId
-
 -- | <http://www.sqlite.org/c3ref/changes.html>
 --
 -- Return the number of rows that were changed, inserted, or deleted
@@ -574,33 +567,36 @@ getSql stmt =
 -- refer to a previously inserted row) and 'executeNamed' (an easier
 -- to maintain form of query parameter naming).
 --
--- >{-# LANGUAGE OverloadedStrings #-}
--- >
--- >import           Control.Applicative
--- >import qualified Data.Text as T
--- >import           Sqlite
--- >import           Sqlite.Query
--- >
--- >data TestField = TestField Int T.Text deriving (Show)
--- >
--- >instance FromRow TestField where
--- >  fromRow = TestField <$> field <*> field
--- >
--- >instance ToRow TestField where
--- >  toRow (TestField id_ str) = toRow (id_, str)
--- >
--- >main :: IO ()
--- >main = do
--- >  conn <- open "test.db"
--- >  execute_ conn "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, str TEXT)"
--- >  execute conn "INSERT INTO test (str) VALUES (?)" (Only ("test string 2" :: String))
--- >  execute conn "INSERT INTO test (id, str) VALUES (?,?)" (TestField 13 "test string 3")
--- >  rowId <- lastInsertRowId conn
--- >  executeNamed conn "UPDATE test SET str = :str WHERE id = :id" [":str" := ("updated str" :: T.Text), ":id" := rowId]
--- >  r <- query_ conn "SELECT * from test" :: IO [TestField]
--- >  mapM_ print r
--- >  execute conn "DELETE FROM test WHERE id = ?" (Only rowId)
--- >  close conn
+-- >>> :{
+-- import Sqlite
+-- import Sqlite.Query
+-- import Control.Applicative
+-- import Data.Text qualified as T
+-- --
+-- data TestField = TestField Int T.Text deriving (Show)
+-- --
+-- instance FromRow TestField where
+--   fromRow = TestField <$> field <*> field
+-- --
+-- instance ToRow TestField where
+--   toRow (TestField id_ str) = toRow (id_, str)
+-- :}
+--
+-- >>> :{
+-- do
+--   conn <- open ":memory:"
+--   execute_ conn "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, str TEXT)"
+--   execute conn "INSERT INTO test (str) VALUES (?)" (MkSolo ("test string 2" :: String))
+--   execute conn "INSERT INTO test (id, str) VALUES (?,?)" (TestField 13 "test string 3")
+--   rowId <- lastInsertRowId conn
+--   executeNamed conn "UPDATE test SET str = :str WHERE id = :id" [":str" := ("updated str" :: T.Text), ":id" := rowId]
+--   r <- select_ conn "SELECT * from test" :: IO [TestField]
+--   mapM_ print r
+--   execute conn "DELETE FROM test WHERE id = ?" (MkSolo rowId)
+--   close conn
+-- :}
+-- TestField 1 "test string 2"
+-- TestField 13 "updated str"
 
 -- $querytype
 --
@@ -614,7 +610,7 @@ getSql stmt =
 -- facility to address both ease of use and security.  A 'Sql' is a
 -- @newtype@-wrapped 'Text'. It intentionally exposes a tiny API that
 -- is not compatible with the 'Text' API; this makes it difficult to
--- construct queries from fragments of strings.  The 'query' and
+-- construct queries from fragments of strings.  The 'select' and
 -- 'execute' functions require queries to be of type 'Sql'.
 --
 -- To most easily construct a query, enable GHC's @OverloadedStrings@
@@ -627,7 +623,7 @@ getSql stmt =
 -- >
 -- > hello = do
 -- >   conn <- open "test.db"
--- >   [[x]] <- query_ conn "select 2 + 2"
+-- >   [[x]] <- select_ conn "select 2 + 2"
 -- >   print x
 --
 -- A 'Sql' value does not represent the actual query that will be
@@ -653,8 +649,8 @@ getSql stmt =
 
 -- $substpos
 --
--- The 'Sql' template accepted by 'query', 'execute' and 'fold' can
--- contain any number of \"@?@\" characters.  Both 'query' and
+-- The 'Sql' template accepted by 'select', 'execute' and 'fold' can
+-- contain any number of \"@?@\" characters.  Both 'select' and
 -- 'execute' accept a third argument, typically a tuple. When the
 -- query executes, the first \"@?@\" in the template will be replaced
 -- with the first element of the tuple, the second \"@?@\" with the
@@ -684,7 +680,7 @@ getSql stmt =
 
 -- $substnamed
 --
--- Named parameters are accepted by 'queryNamed', 'executeNamed' and
+-- Named parameters are accepted by 'selectNamed', 'executeNamed' and
 -- 'foldNamed'.  These functions take a list of 'NamedParam's which
 -- are key-value pairs binding a value to an argument name.  As is the
 -- case with \"@?@\" parameters, named parameters are automatically
@@ -694,7 +690,7 @@ getSql stmt =
 -- Example:
 --
 -- @
--- r \<- 'queryNamed' c \"SELECT id,text FROM posts WHERE id = :id AND date >= :date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
+-- r \<- 'selectNamed' c \"SELECT id,text FROM posts WHERE id = :id AND date >= :date\" [\":id\" ':=' postId, \":date\" ':=' afterDate]
 -- @
 --
 -- Note that you can mix different value types in the same list.
@@ -705,7 +701,7 @@ getSql stmt =
 -- @
 --
 -- The parameter name (or key) in the 'NamedParam' must match exactly
--- the name written in the Sql query.  E.g., if you used @:foo@ in
+-- the name written in the Sql query. E.g., if you used @:foo@ in
 -- your Sql statement, you need to use @\":foo\"@ as the parameter
 -- key, not @\"foo\"@.  Some libraries like Python's sqlite3
 -- automatically drop the @:@ character from the name.
@@ -718,13 +714,13 @@ getSql stmt =
 -- types. Consider a case where you write a numeric literal in a
 -- parameter tuple:
 --
--- > query conn "select ? + ?" (40,2)
+-- > select conn "select ? + ?" (40,2)
 --
 -- The above query will be rejected by the compiler, because it does
 -- not know the specific numeric types of the literals @40@ and @2@.
 -- This is easily fixed:
 --
--- > query conn "select ? + ?" (40 :: Double, 2 :: Double)
+-- > select conn "select ? + ?" (40 :: Double, 2 :: Double)
 --
 -- The same kind of problem can arise with string literals if you have
 -- the @OverloadedStrings@ language extension enabled.  Again, just
@@ -747,7 +743,7 @@ getSql stmt =
 
 -- $result
 --
--- The 'query' and 'query_' functions return a list of values in the
+-- The 'select' and 'select_' functions return a list of values in the
 -- 'FromRow' typeclass. This class performs automatic extraction
 -- and type conversion of rows from a query result.
 --
@@ -755,7 +751,7 @@ getSql stmt =
 --
 -- > import qualified Data.Text as T
 -- >
--- > xs <- query_ conn "select name,age from users"
+-- > xs <- select_ conn "select name,age from users"
 -- > forM_ xs $ \(name,age) ->
 -- >   putStrLn $ T.unpack name ++ " is " ++ show (age :: Int)
 --
@@ -784,7 +780,7 @@ getSql stmt =
 --
 -- > (Text, Maybe Int, Int)
 --
--- If 'query' encounters a @NULL@ in a row where the corresponding
+-- If 'select' encounters a @NULL@ in a row where the corresponding
 -- Haskell type is not 'Maybe', it will throw a 'ResultError'
 -- exception.
 
@@ -793,7 +789,7 @@ getSql stmt =
 -- To specify that a query returns a single-column result, use the
 -- 'Only' type.
 --
--- > xs <- query_ conn "select id from users"
+-- > xs <- select_ conn "select id from users"
 -- > forM_ xs $ \(Only dbid) -> {- ... -}
 
 -- $types
@@ -804,7 +800,7 @@ getSql stmt =
 -- * For numeric types, any Haskell type that can accurately represent
 --   an Sqlite INTEGER is considered \"compatible\".
 --
--- * If a numeric incompatibility is found, 'query' will throw a
+-- * If a numeric incompatibility is found, 'select' will throw a
 --   'ResultError'.
 --
 -- * Sqlite's TEXT type is always encoded in UTF-8.  Thus any text
@@ -816,3 +812,9 @@ getSql stmt =
 --
 -- You can extend conversion support to your own types be adding your
 -- own 'FromField' / 'ToField' instances.
+
+-- $setup
+-- >>> :set -XBlockArguments
+-- >>> :set -XOverloadedStrings
+-- >>> import Sqlite
+-- >>> import Data.Tuple

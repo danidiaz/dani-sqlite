@@ -23,7 +23,7 @@ import Common
 import Data.Maybe (fromJust)
 import Sqlite qualified as Base
 import Test.Tasty.HUnit
-import qualified Test.Tasty.HUnit as Tasty
+import Test.Tasty.HUnit qualified as Tasty
 
 testBind :: IO TestEnv -> Tasty.Assertion
 testBind ioenv = do

@@ -176,7 +176,7 @@ data BackupStepResult
 
 -- | A 'ByteString' containing UTF8-encoded text with no NUL characters.
 newtype Utf8 = Utf8 ByteString
-  deriving stock (Eq, Ord) 
+  deriving stock (Eq, Ord)
   deriving newtype (Semigroup, Monoid, Show)
 
 packUtf8 :: a -> (Utf8 -> a) -> CString -> IO a
@@ -620,6 +620,9 @@ columnBlob (PreparedStatement stmt) idx = do
   packCStringLen ptr len
 
 -- | <https://www.sqlite.org/c3ref/last_insert_rowid.html>
+--
+-- Returns the rowid of the most recent successful INSERT on the
+-- given database connection.
 lastInsertRowId :: Connection -> IO Int64
 lastInsertRowId (Connection db) =
   c_sqlite3_last_insert_rowid db
